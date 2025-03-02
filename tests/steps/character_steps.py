@@ -1,22 +1,19 @@
 from behave import given, when, then
-from src.database.operations import (
-    create_campaign, create_character, get_character, list_characters,
-    delete_character, update_character, search_characters, update_character_progress
+from src.database.character_operations import (
+    create_character, get_character, list_characters,
+    delete_character, update_character, search_characters, update_character_progress, get_character_by_name
 )
+from src.database.campaign_operations import create_campaign, get_campaign_by_name
 from src.models.character import Character
 import json
 
-@given('a character "{name}" exists')
-def step_impl_character_exists(context, name):
-    # First ensure we have a campaign
-    if not hasattr(context, 'campaign_id'):
-        campaign = create_campaign("Test Campaign", "A test campaign for character tests")
-        context.campaign_id = campaign.id
-    
+@given('a character "{name}" exists for "{campaign_name}" campaign')
+def step_impl_character_exists(context, name, campaign_name):
     # Create the character
+    campaign = get_campaign_by_name(campaign_name)
     character = create_character(
         name=name,
-        campaign_id=context.campaign_id,
+        campaign_id=campaign.id,
         player_name="Test Player",
         race="Human",
         character_class="Fighter",
@@ -31,11 +28,12 @@ def step_impl_create_character_details(context):
         name = row['name']
         race = row['race']
         character_class = row['class']
-        campaign_id = int(row['campaign_id'])
+        campaign_name = row['campaign_name']
+        campaign = get_campaign_by_name(campaign_name)
         
         character = create_character(
             name=name,
-            campaign_id=campaign_id,
+            campaign_id=campaign.id,
             race=race,
             character_class=character_class
         )
@@ -91,10 +89,11 @@ def step_impl_character_created(context, name):
     character = get_character(context.created_character.id)
     assert character.name == name
 
-@then('the character should be associated with the "{campaign_name}" campaign')
-def step_impl_character_associated_with_campaign(context, campaign_name):
-    character = get_character(context.character_id)
-    assert character.campaign_id == context.campaign_id
+@then('{name} should be associated with the "{campaign_name}" campaign')
+def step_impl_character_associated_with_campaign(context, name, campaign_name):
+    campaign = get_campaign_by_name(campaign_name)
+    character = get_character_by_name(name, campaign.id)
+    assert character.campaign_id == campaign.id
 
 @then('the character "{name}" should be updated successfully')
 def step_impl_character_updated(context, name):
@@ -128,12 +127,12 @@ def step_impl_character_not_in_list(context):
     character_names = [character.name for character in characters]
     assert context.deleted_character_name not in character_names
 
-@then('the search results should include "{name}"')
+@then('the character search results should include "{name}"')
 def step_impl_search_include_character(context, name):
     character_names = [character.name for character in context.search_results]
     assert name in character_names
 
-@then('the search results should not include "{name}"')
+@then('the character search results should not include "{name}"')
 def step_impl_search_exclude_character(context, name):
     character_names = [character.name for character in context.search_results]
     assert name not in character_names
@@ -152,11 +151,12 @@ def step_impl_multiple_characters_exist(context):
         name = row['name']
         race = row['race']
         character_class = row['class']
-        campaign_id = int(row['campaign_id'])
+        campaign_name = row['campaign_name']
+        campaign = get_campaign_by_name(campaign_name)
         
         character = create_character(
             name=name,
-            campaign_id=campaign_id,
+            campaign_id=campaign.id,
             race=race,
             character_class=character_class
         )

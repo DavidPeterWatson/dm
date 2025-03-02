@@ -1,4 +1,4 @@
-from src.database.operations import init_db, clear_database
+from src.database.db_operations import init_db, clear_database
 
 # Test database name
 TEST_DB_NAME = "dnd_gm_test"

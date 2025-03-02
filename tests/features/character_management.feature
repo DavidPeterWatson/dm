@@ -5,16 +5,19 @@ Feature: Character Management
 
   Scenario: Create a new character
     Given the D&D GM Assistant is running
+    And an empty database
     And a campaign "Lost Mines" exists
     When I create a character with the following details:
-      | name           | race          | class   | campaign_id |
-      | Fizwick        | Forest Gnome  | Wizard  | 1           |
+      | name           | race          | class   | campaign_name |
+      | Fizwick        | Forest Gnome  | Wizard  | Lost Mines           |
     Then the character "Fizwick" should be created successfully
-    And the character should be associated with the "Lost Mines" campaign
+    And Fizwick should be associated with the "Lost Mines" campaign
 
   Scenario: Update an existing character
     Given the D&D GM Assistant is running
-    And a character "Fizwick" exists
+    And an empty database
+    And a campaign "Lost Mines" exists
+    And a character "Fizwick" exists for "Lost Mines" campaign
     When I update the character with the following details:
       | level | ability_scores.intelligence |
       | 2     | 19                          |
@@ -24,26 +27,31 @@ Feature: Character Management
 
   Scenario: Delete a character
     Given the D&D GM Assistant is running
-    And a character "Fizwick" exists
+    And an empty database
+    And a campaign "Lost Mines" exists
+    And a character "Fizwick" exists for "Lost Mines" campaign
     When I delete the character "Fizwick"
     Then the character "Fizwick" should be deleted successfully
     And the character should no longer be in the list of characters
 
   Scenario: Search for characters
     Given the D&D GM Assistant is running
+    And a campaign "Lost Mines" exists
     And the following characters exist:
-      | name           | race          | class     | campaign_id |
-      | Fizwick        | Forest Gnome  | Wizard    | 1           |
-      | Bruenor        | Dwarf         | Fighter   | 1           |
-      | Drizzt         | Drow          | Ranger    | 2           |
+      | name           | race          | class     | campaign_name |
+      | Fizwick        | Forest Gnome  | Wizard    | Lost Mines           |
+      | Bruenor        | Dwarf         | Fighter   | Lost Mines           |
+      | Drizzt         | Drow          | Ranger    | Lost Mines           |
     When I search for characters with class "Wizard"
-    Then the search results should include "Fizwick"
-    And the search results should not include "Bruenor"
-    And the search results should not include "Drizzt"
+    Then the character search results should include "Fizwick"
+    And the character search results should not include "Bruenor"
+    And the character search results should not include "Drizzt"
 
   Scenario: Track character campaign progress
     Given the D&D GM Assistant is running
-    And a character "Fizwick" exists
+    And an empty database
+    And a campaign "Lost Mines" exists
+    And a character "Fizwick" exists for "Lost Mines" campaign
     When I update the character's campaign progress with:
       | current_location                                      | key_discoveries                                    |
       | Entrance to Mythalar's sanctuary in Whispering Ruins  | Inkwhisper is an 'Awakened Conduit'               |

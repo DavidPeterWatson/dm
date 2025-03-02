@@ -17,7 +17,7 @@ The D&D Game Master Assistant MCP server will enhance Claude's capabilities as a
 ## Technology Stack
 
 - **Language**: Python 3.10+
-- **MCP Implementation**: MCP Python SDK
+- **MCP Implementation**: fastmcp as per the documentation at https://github.com/modelcontextprotocol/fastmcp/tree/main
 - **Database**: MongoDB (for document-based storage of campaign data)
 - **Testing**: Behave (for BDD-style testing)
 - **Additional Libraries**:
@@ -40,7 +40,9 @@ dnd-gm-assistant/
 │   ├── database/
 │   │   ├── __init__.py
 │   │   ├── schema.py             # Database schema definitions
-│   │   └── operations.py         # Database CRUD operations
+│   │   └── db_operations.py         # default Database operations
+│   │   └── campaign_operations.py         # Database CRUD operations
+│   │   └── character_operations.py         # Database CRUD operations
 │   ├── models/
 │   │   ├── __init__.py
 │   │   ├── campaign.py           # Data models for campaign elements

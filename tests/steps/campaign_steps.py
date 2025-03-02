@@ -1,36 +1,18 @@
 from behave import given, when, then
-from src.dm import mcp
-from src.database.operations import (
+from src.database.campaign_operations import (
     create_campaign, get_campaign, list_campaigns, 
     delete_campaign, update_campaign, search_campaigns,
-    clear_database
+    delete_all_campaigns, get_campaign_by_name
 )
+
 from src.models.campaign import Campaign
-import json
 
-@given('the D&D GM Assistant is running')
-def step_impl_start_server(context):
-    # In a real scenario, you would start the server here
-    pass
-
-@given('an empty database')
-def step_impl_empty_database(context):
-    clear_database()
-
-def delete_all_campaigns(context):
-    # Get all campaigns
-    campaigns = list_campaigns()
-    # Delete each campaign
-    for campaign in campaigns:
-        delete_campaign(campaign.id)
-    # Verify the database is empty
-    assert len(list_campaigns()) == 0, "Database was not emptied successfully"
 
 
 @given('only the following campaigns exist')
 def step_impl_only_these_campaigns_exist(context):
     # First clear the database
-    delete_all_campaigns(context)
+    delete_all_campaigns()
     # Then create the specified campaigns
     context.campaign_ids = []
     for row in context.table:
@@ -65,11 +47,9 @@ def step_impl_update_campaign_details(context):
 
 @when('I delete the campaign "{name}"')
 def step_impl_delete_campaign(context, name):
-    # Get the campaign ID from the context and delete it
-    result = delete_campaign(context.campaign_id)
-    # Store the result for verification
+    campaign = get_campaign_by_name(name)
+    result = delete_campaign(campaign.id)
     context.delete_result = result
-    # Also store the name for later verification
     context.deleted_campaign_name = name
 
 @when('I search for campaigns containing "{query}"')
@@ -78,12 +58,13 @@ def step_impl_search_campaigns(context, query):
 
 @then('the campaign "{name}" should be created successfully')
 def step_impl_campaign_created(context, name):
-    campaign = get_campaign(context.created_campaign.id)
+    campaign = get_campaign_by_name(name)
+    campaign = get_campaign(campaign.id)
     assert campaign.name == name
 
 @then('the campaign "{name}" should be updated successfully')
 def step_impl_campaign_updated(context, name):
-    campaign = get_campaign(context.campaign_id)
+    campaign = get_campaign(context.updated_campaign.id)
     assert campaign.name == name
 
 @then('the campaign "{name}" should be deleted successfully')
@@ -93,18 +74,18 @@ def step_impl_campaign_deleted(context, name):
     
     # Then try to get the campaign and expect a ValueError
     try:
-        get_campaign(context.campaign_id)
-        assert False, "Campaign was not deleted - still retrievable by ID"
+        get_campaign_by_name(name)
+        assert False, "Campaign was not deleted - still retrievable by name"
     except ValueError:
         # This is the expected path - campaign should not be found
         pass
 
-@then('the search results should include "{name}"')
+@then('the campaign search results should include "{name}"')
 def step_impl_search_include(context, name):
     campaign_names = [campaign.name for campaign in context.search_results]
     assert name in campaign_names
 
-@then('the search results should not include "{name}"')
+@then('the campaign search results should not include "{name}"')
 def step_impl_search_exclude(context, name):
     campaign_names = [campaign.name for campaign in context.search_results]
     assert name not in campaign_names
