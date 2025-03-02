@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "dungeon_master": {
+      "command": "/Library/Frameworks/Python.framework/Versions/3.12/bin/uv",
+      "args": [
+        "--directory",
+        "/Users/david/Library/Mobile Documents/com~apple~CloudDocs/Documents/repos/github/dm/src",
+        "run",
+        "dm.py"
+      ]
+    }
+  }
+}
