@@ -1,4 +1,4 @@
-.PHONY: setup install init-db run test
+.PHONY: setup install init-db run test test-scenario
 
 # Install project dependencies
 install:
@@ -21,7 +21,11 @@ run:
 
 # Run BDD tests using Behave
 test:
-	PYTHONPATH=src behave tests/features
+	PYTHONPATH=src behave tests/features --no-capture --format pretty
+
+# Run a specific scenario
+test-scenario:
+	PYTHONPATH=src behave tests/features/$(FEATURE).feature --name "$(SCENARIO)"
 
 # If you have a venv setup section, update it
 setup-venv:

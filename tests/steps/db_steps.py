@@ -8,4 +8,4 @@ def step_impl_start_server(context):
 
 @given('an empty database')
 def step_impl_empty_database(context):
-    clear_database()
+    clear_database(context.db)

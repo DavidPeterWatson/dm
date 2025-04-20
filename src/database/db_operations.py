@@ -1,33 +1,60 @@
 from pymongo import MongoClient
-from bson.objectid import ObjectId
 import os
-from typing import Optional, Dict, Any
+from typing import Optional
 
 # Default connection settings
 MONGODB_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017/")
 DB_NAME = os.environ.get("DB_NAME", "dnd_gm")
 
-# Initialize with None, will be set up in init_db
-client = None
-db = None
-campaigns_collection = None
-characters_collection = None
-
-def init_db(db_name: Optional[str] = None):
-    """Initialize database connection with optional database name override"""
-    global client, db, campaigns_collection, characters_collection
+class Database:
+    def __init__(self):
+        self.client = None
+        self.db = None
+        self.campaigns_collection = None
+        self.characters_collection = None
+        # Add other collections as needed
+        self.initialized = False
     
-    # Use provided db_name or fall back to default
-    actual_db_name = db_name or DB_NAME
+def init_db(db: Database, connection_string: Optional[str] = None, db_name: Optional[str] = None):
+    """Initialize the database connection and collections"""
+    if db.initialized:
+        return
+        
+    # Default connection values
+    connection_string = connection_string or MONGODB_URI
+    db_name = db_name or DB_NAME
     
-    client = MongoClient(MONGODB_URI)
-    db = client[actual_db_name]
-    campaigns_collection = db["campaigns"]
-    characters_collection = db["characters"]
-    return db
+    db.client = MongoClient(connection_string)
+    db.db = db.client[db_name]
+    
+    # Set up campaigns collection
+    db.campaigns_collection = db.db.campaigns
+    db.campaigns_collection.create_index("name")
+    db.campaigns_collection.create_index("description")
+    
+    # Set up characters collection
+    db.characters_collection = db.db.characters
+    db.characters_collection.create_index("name")
+    db.characters_collection.create_index("campaign_id")
+    db.characters_collection.create_index("class")
+    db.characters_collection.create_index("race")
 
-# Initialize with default settings
-init_db()
+    db.initialized = True
+
+def close(db: Database):
+    """Close the database connection"""
+    if db.client:
+        db.client.close()
+        db.initialized = False
+
+def clear_database(db: Database):
+    """Clear all campaigns and characters from the database"""
+    if not db.initialized:
+        raise RuntimeError("Database not initialized. Call init_db() first.")
+        
+    db.campaigns_collection.delete_many({})
+    db.characters_collection.delete_many({})
+    return True
 
 # Helper function to convert between MongoDB ObjectId and integer ID
 def objectid_to_int(oid):
@@ -37,8 +64,3 @@ def objectid_to_int(oid):
 def objectid_to_str(oid):
     return str(oid)
 
-def clear_database():
-    """Clear all campaigns and characters from the database"""
-    campaigns_collection.delete_many({})
-    characters_collection.delete_many({})
-    return True 

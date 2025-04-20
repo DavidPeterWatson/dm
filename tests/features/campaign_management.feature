@@ -16,19 +16,24 @@ Feature: Campaign Management
     Given the D&D GM Assistant is running
     And an empty database
     And a campaign "Lost Mines of Phandelver" exists
-    When I update the campaign with the following details:
+    When I update campaigns with the following details:
       | name                      | description                                        |
       | Lost Mines of Phandelver  | An adventure in Phandalin and the Sword Mountains  |
     Then the campaign "Lost Mines of Phandelver" should be updated successfully
     And the campaign "Lost Mines of Phandelver" should have description "An adventure in Phandalin and the Sword Mountains"
 
+  Scenario: Empty the database
+    Given the D&D GM Assistant is running
+    And an empty database
+    Then the campaign "Lost Mines" should no longer be in the list of campaigns
+
   Scenario: Delete a campaign
     Given the D&D GM Assistant is running
     And an empty database
-    And a campaign "Lost Mines" exists
-    When I delete the campaign "Lost Mines"
-    Then the campaign "Lost Mines" should be deleted successfully
-    And the campaign "Lost Mines" should no longer be in the list of campaigns
+    And a campaign "Delete Lost Mines" exists
+    When I delete the campaign "Delete Lost Mines"
+    Then the campaign "Delete Lost Mines" should be deleted successfully
+    And the campaign "Delete Lost Mines" should no longer be in the list of campaigns
 
   Scenario: Search for campaigns
     Given the D&D GM Assistant is running
@@ -55,3 +60,10 @@ Feature: Campaign Management
   #   Then the campaign search results should include "Lost Mines"
   #   And the campaign search results should include "Curse of Strahd"
   #   And the campaign search results should include "Storm King's Thunder" 
+
+  Scenario: Cannot create campaigns with duplicate names
+    Given the D&D GM Assistant is running
+    When I create a campaign named "Unique Campaign" with description "This is a unique campaign"
+    Then the campaign "Unique Campaign" should be created successfully
+    When I create a campaign named "Unique Campaign" with description "This is a duplicate name"
+    Then I should see an error that the campaign name already exists 

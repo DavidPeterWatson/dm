@@ -2,9 +2,14 @@ from datetime import datetime, timezone
 from typing import List, Optional
 from models.campaign import Campaign
 from bson.objectid import ObjectId
-from .db_operations import campaigns_collection, objectid_to_str
+from .db_operations import objectid_to_str, Database
 
-def create_campaign(name: str, description: str) -> Campaign:
+def create_campaign(db: Database, name: str, description: str) -> Campaign:
+    # Check if a campaign with this name already exists
+    existing_campaign = db.campaigns_collection.find_one({"name": name})
+    if existing_campaign:
+        raise ValueError(f"A campaign with the name '{name}' already exists")
+    
     now = datetime.now(timezone.utc)
     # Create a new ObjectId first
     oid = ObjectId()
@@ -19,7 +24,7 @@ def create_campaign(name: str, description: str) -> Campaign:
         "created_at": now.isoformat(),
         "updated_at": now.isoformat()
     }
-    campaigns_collection.insert_one(campaign)
+    db.campaigns_collection.insert_one(campaign)
     
     # For the Pydantic model
     campaign_dict = {
@@ -32,9 +37,9 @@ def create_campaign(name: str, description: str) -> Campaign:
     }
     return Campaign(**campaign_dict)
 
-def update_campaign(campaign_id: str, name: str, description: str) -> Campaign:
+def update_campaign(db: Database, campaign_id: str, name: str, description: str) -> Campaign:
     # Find by string ID
-    campaign = campaigns_collection.find_one({"id": campaign_id})
+    campaign = db.campaigns_collection.find_one({"id": campaign_id})
     if not campaign:
         raise ValueError(f"Campaign with ID {campaign_id} does not exist.")
     
@@ -44,7 +49,7 @@ def update_campaign(campaign_id: str, name: str, description: str) -> Campaign:
         "description": description,
         "updated_at": now.isoformat()
     }
-    campaigns_collection.update_one({"id": campaign_id}, {"$set": updated_fields})
+    db.campaigns_collection.update_one({"id": campaign_id}, {"$set": updated_fields})
     
     # For the Pydantic model
     campaign_dict = {
@@ -57,14 +62,14 @@ def update_campaign(campaign_id: str, name: str, description: str) -> Campaign:
     }
     return Campaign(**campaign_dict)
 
-def delete_campaign(campaign_id: str) -> bool:
-    result = campaigns_collection.delete_one({"id": campaign_id})
+def delete_campaign(db: Database, campaign_id: str) -> bool:
+    result = db.campaigns_collection.delete_one({"id": campaign_id})
     if result.deleted_count > 0:
         return True
     return False
 
-def search_campaigns(query: str) -> List[Campaign]:
-    results = campaigns_collection.find({"$or": [
+def search_campaigns(db: Database, query: str) -> List[Campaign]:
+    results = db.campaigns_collection.find({"$or": [
         {"name": {"$regex": query, "$options": "i"}},
         {"description": {"$regex": query, "$options": "i"}}
     ]})
@@ -81,8 +86,8 @@ def search_campaigns(query: str) -> List[Campaign]:
         campaigns.append(Campaign(**campaign_dict))
     return campaigns
 
-def get_campaign(campaign_id: str) -> Campaign:
-    campaign = campaigns_collection.find_one({"id": campaign_id})
+def get_campaign(db: Database, campaign_id: str) -> Campaign:
+    campaign = db.campaigns_collection.find_one({"id": campaign_id})
     if not campaign:
         raise ValueError(f"Campaign with ID {campaign_id} does not exist.")
     
@@ -106,8 +111,8 @@ def get_campaign(campaign_id: str) -> Campaign:
     }
     return Campaign(**campaign_dict)
 
-def get_campaign_by_name(name: str) -> Optional[Campaign]:
-    campaign = campaigns_collection.find_one({"name": name})
+def get_campaign_by_name(db: Database, name: str) -> Optional[Campaign]:
+    campaign = db.campaigns_collection.find_one({"name": name})
     if not campaign:
         return None
     
@@ -131,8 +136,8 @@ def get_campaign_by_name(name: str) -> Optional[Campaign]:
     }
     return Campaign(**campaign_dict)
 
-def list_campaigns() -> List[Campaign]:
-    campaigns = campaigns_collection.find()
+def list_campaigns(db: Database) -> List[Campaign]:
+    campaigns = db.campaigns_collection.find()
     campaign_list = []
     for campaign in campaigns:
         # Convert datetime objects to ISO strings if needed
@@ -156,6 +161,6 @@ def list_campaigns() -> List[Campaign]:
         campaign_list.append(Campaign(**campaign_dict))
     return campaign_list
 
-def delete_all_campaigns() -> int:
-    result = campaigns_collection.delete_many({})
-    return result.deleted_count 
+def delete_all_campaigns(db: Database) -> int:
+    result = db.campaigns_collection.delete_many({})
+    return result.deleted_count

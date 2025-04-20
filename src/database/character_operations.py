@@ -2,61 +2,79 @@ from datetime import datetime, timezone
 from typing import List, Optional
 from models.character import Character
 from bson.objectid import ObjectId
-from .db_operations import characters_collection, objectid_to_int
+from .db_operations import objectid_to_str
 from .campaign_operations import get_campaign
+from .db_operations import Database
 
-def create_character(name: str, campaign_id: int, player_name: Optional[str] = None, 
-                    race: Optional[str] = None, character_class: Optional[str] = None,
-                    level: int = 1, data: Optional[dict] = None):
+def create_character(db: Database, character: Character):
+
     # Verify campaign exists
     try:
-        get_campaign(campaign_id)
+        get_campaign(db, character.campaign_id)
     except ValueError:
-        raise ValueError(f"Campaign with ID {campaign_id} does not exist.")
+        raise ValueError(f"Campaign with ID {character.campaign_id} does not exist.")
     
     # Check if a character with this name already exists
-    existing_character = characters_collection.find_one({"name": name})
+    existing_character = db.characters_collection.find_one({"name": character.name})
     if existing_character:
-        raise ValueError(f"Character with name '{name}' already exists.")
+        raise ValueError(f"Character with name '{character.name}' already exists.")
     
     now = datetime.now(timezone.utc)
     # Create a new ObjectId first
     oid = ObjectId()
-    int_id = objectid_to_int(oid)
+    str_id = objectid_to_str(oid)
     
-    character = {
-        "_id": oid,
-        "int_id": int_id,
-        "campaign_id": campaign_id,
-        "name": name,
-        "player_name": player_name,
-        "race": race,
-        "class": character_class,
-        "level": level,
-        "data": data or {},
-        "created_at": now.isoformat(),
-        "updated_at": now.isoformat()
-    }
-    characters_collection.insert_one(character)
+    # Convert character to dict and prepare for MongoDB
+    character_dict = character.model_dump()
     
-    # For the Pydantic model
-    character_dict = {
-        "id": int_id,
-        "campaign_id": campaign_id,
-        "name": name,
-        "player_name": player_name,
-        "race": race,
-        "class": character_class,
-        "level": level,
-        "data": data or {},
-        "created_at": now.isoformat(),
-        "updated_at": now.isoformat()
-    }
-    return Character(**character_dict)
+    # Set ID and timestamps
+    character_dict["_id"] = oid
+    character_dict["id"] = str_id
+    character_dict["created_at"] = now.isoformat()
+    character_dict["updated_at"] = now.isoformat()
+    
+    # Handle class field specially
+    if "character_class" in character_dict:
+        character_dict["class"] = character_dict.pop("character_class")
+    
+    # Insert into database
+    db.characters_collection.insert_one(character_dict)
+    
+    return _convert_db_character_to_model(character_dict)
 
-def update_character(character_id: int, **kwargs):
-    # Find by integer ID
-    character = characters_collection.find_one({"int_id": character_id})
+    # character.id = character_dict["id"]
+    # character.created_at = character_dict["created_at"]
+    # character.updated_at = character_dict["updated_at"] 
+    # return character
+
+    # # Return updated character
+    # return Character(
+    #     id=str_id,
+    #     campaign_id=character.campaign_id,
+    #     name=character.name,
+    #     player_name=character.player_name,
+    #     race=character.race,
+    #     character_class=character_dict.get("class"),
+    #     level=character.level,
+    #     subclass=character.subclass,
+    #     background=character.background,
+    #     ability_scores=character.ability_scores,
+    #     modifiers=character.modifiers,
+    #     proficiencies=character.proficiencies,
+    #     personality=character.personality,
+    #     backstory=character.backstory,
+    #     equipment=character.equipment,
+    #     spells=character.spells,
+    #     familiar=character.familiar,
+    #     motivations=character.motivations,
+    #     data=character.data,
+    #     created_at=now.isoformat(),
+    #     updated_at=now.isoformat()
+    # )
+
+def update_character(db: Database, character_id: str, **kwargs):
+    # Find by string ID
+    character = db.characters_collection.find_one({"id": character_id})
     if not character:
         raise ValueError(f"Character with ID {character_id} does not exist.")
     
@@ -65,7 +83,6 @@ def update_character(character_id: int, **kwargs):
     # Prepare update fields
     updated_fields = {"updated_at": now.isoformat()}
     
-    # Add any provided fields to the update
     for key, value in kwargs.items():
         if key == "character_class":  # Handle the class field specially
             updated_fields["class"] = value
@@ -80,111 +97,68 @@ def update_character(character_id: int, **kwargs):
         else:
             updated_fields[key] = value
     
-    characters_collection.update_one({"int_id": character_id}, {"$set": updated_fields})
+    db.characters_collection.update_one({"id": character_id}, {"$set": updated_fields})
     
-    # Get the updated character
-    updated_character = characters_collection.find_one({"int_id": character_id})
-    
-    # For the Pydantic model
-    character_dict = {
-        "id": updated_character["int_id"],
-        "campaign_id": updated_character["campaign_id"],
-        "name": updated_character["name"],
-        "player_name": updated_character.get("player_name"),
-        "race": updated_character.get("race"),
-        "class": updated_character.get("class"),
-        "level": updated_character.get("level", 1),
-        "data": updated_character.get("data", {}),
-        "created_at": updated_character["created_at"],
-        "updated_at": updated_character["updated_at"]
-    }
-    return Character(**character_dict)
+    updated_character = db.characters_collection.find_one({"id": character_id})
+    return _convert_db_character_to_model(updated_character)
 
-def delete_character(character_id: int) -> bool:
-    result = characters_collection.delete_one({"int_id": character_id})
+def delete_character(db: Database, character_id: str) -> bool:
+    result = db.characters_collection.delete_one({"id": character_id})
     if result.deleted_count > 0:
         return True
     return False
 
-def get_character(character_id: int):
-    character = characters_collection.find_one({"int_id": character_id})
-    if not character:
-        raise ValueError(f"Character with ID {character_id} does not exist.")
-    
+def _convert_db_character_to_model(character: dict) -> Character:
     character_dict = {
-        "id": character["int_id"],
+        "id": character["id"],
         "campaign_id": character["campaign_id"],
         "name": character["name"],
         "player_name": character.get("player_name"),
         "race": character.get("race"),
-        "class": character.get("class"),
+        "character_class": character.get("class"),
+        "subclass": character.get("subclass"),
+        "background": character.get("background"),
         "level": character.get("level", 1),
+        "ability_scores": character.get("ability_scores"),
+        "modifiers": character.get("modifiers"),
+        "proficiencies": character.get("proficiencies"),
+        "personality": character.get("personality"),
+        "backstory": character.get("backstory"),
+        "equipment": character.get("equipment"),
+        "spells": character.get("spells"),
+        "familiar": character.get("familiar"),
+        "motivations": character.get("motivations"),
         "data": character.get("data", {}),
         "created_at": character["created_at"],
         "updated_at": character["updated_at"]
     }
     return Character(**character_dict)
 
-def get_character_by_name(name: str):
+def get_character(db: Database, character_id: str):
+    character = db.characters_collection.find_one({"id": character_id})
+    if not character:
+        raise ValueError(f"Character with ID {character_id} does not exist.")
+    
+    return _convert_db_character_to_model(character)
+
+def get_character_by_name(db: Database, name: str):
     query = {"name": name}
-    character = characters_collection.find_one(query)
+    character = db.characters_collection.find_one(query)
     
     if not character:
         raise ValueError(f"Character with name '{name}' does not exist.")
     
-    character_dict = {
-        "id": character["int_id"],
-        "campaign_id": character["campaign_id"],
-        "name": character["name"],
-        "player_name": character.get("player_name"),
-        "race": character.get("race"),
-        "class": character.get("class"),
-        "level": character.get("level", 1),
-        "data": character.get("data", {}),
-        "created_at": character["created_at"],
-        "updated_at": character["updated_at"]
-    }
-    return Character(**character_dict)
+    return _convert_db_character_to_model(character)
 
-def list_characters() -> List[Character]:
-    characters = characters_collection.find()
-    character_list = []
-    for character in characters:
-        character_dict = {
-            "id": character["int_id"],
-            "campaign_id": character["campaign_id"],
-            "name": character["name"],
-            "player_name": character.get("player_name"),
-            "race": character.get("race"),
-            "class": character.get("class"),
-            "level": character.get("level", 1),
-            "data": character.get("data", {}),
-            "created_at": character["created_at"],
-            "updated_at": character["updated_at"]
-        }
-        character_list.append(Character(**character_dict))
-    return character_list
+def list_characters(db: Database) -> List[Character]:
+    characters = db.characters_collection.find()
+    return [_convert_db_character_to_model(character) for character in characters]
 
-def list_campaign_characters(campaign_id: int) -> List[Character]:
-    characters = characters_collection.find({"campaign_id": campaign_id})
-    character_list = []
-    for character in characters:
-        character_dict = {
-            "id": character["int_id"],
-            "campaign_id": character["campaign_id"],
-            "name": character["name"],
-            "player_name": character.get("player_name"),
-            "race": character.get("race"),
-            "class": character.get("class"),
-            "level": character.get("level", 1),
-            "data": character.get("data", {}),
-            "created_at": character["created_at"],
-            "updated_at": character["updated_at"]
-        }
-        character_list.append(Character(**character_dict))
-    return character_list
+def list_campaign_characters(db: Database, campaign_id: str) -> List[Character]:
+    characters = db.characters_collection.find({"campaign_id": campaign_id})
+    return [_convert_db_character_to_model(character) for character in characters]
 
-def search_characters(query: str = None, campaign_id: Optional[int] = None, 
+def search_characters(db: Database, query: str = None, campaign_id: Optional[str] = None, 
                      character_class: Optional[str] = None, race: Optional[str] = None) -> List[Character]:
     # Build the search query
     search_query = {}
@@ -204,28 +178,13 @@ def search_characters(query: str = None, campaign_id: Optional[int] = None,
     if race:
         search_query["race"] = {"$regex": race, "$options": "i"}
     
-    characters = characters_collection.find(search_query)
-    character_list = []
-    for character in characters:
-        character_dict = {
-            "id": character["int_id"],
-            "campaign_id": character["campaign_id"],
-            "name": character["name"],
-            "player_name": character.get("player_name"),
-            "race": character.get("race"),
-            "class": character.get("class"),
-            "level": character.get("level", 1),
-            "data": character.get("data", {}),
-            "created_at": character["created_at"],
-            "updated_at": character["updated_at"]
-        }
-        character_list.append(Character(**character_dict))
-    return character_list
+    characters = db.characters_collection.find(search_query)
+    return [_convert_db_character_to_model(character) for character in characters]
 
-def update_character_progress(character_id: int, current_location: Optional[str] = None, 
+def update_character_progress(db: Database, character_id: str, current_location: Optional[str] = None, 
                              key_discoveries: Optional[List[str]] = None):
     # Get the current character
-    character = get_character(character_id)
+    character = get_character(db, character_id)
     
     # Prepare the campaign progress data
     campaign_progress = {}
@@ -235,4 +194,4 @@ def update_character_progress(character_id: int, current_location: Optional[str]
         campaign_progress["key_discoveries"] = key_discoveries
     
     # Update the character with the campaign progress
-    return update_character(character_id, campaign_progress=campaign_progress) 
+    return update_character(db, character_id, campaign_progress=campaign_progress) 

@@ -19,7 +19,7 @@ def validate_character_data(name: str, campaign_id: int, player_name: Optional[s
         raise ValueError("Character name cannot be empty")
     if len(name) > 100:
         raise ValueError("Character name is too long (max 100 characters)")
-    if campaign_id <= 0:
+    if campaign_id > 100:
         raise ValueError("Invalid campaign ID")
     if player_name and len(player_name) > 100:
         raise ValueError("Player name is too long (max 100 characters)") 

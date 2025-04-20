@@ -1,6 +1,6 @@
 from mcp.server.fastmcp import FastMCP
-from mcp.server.fastmcp import Context
-# from mcp.types import Message, UserMessage, AssistantMessage
+from database.db_operations import Database, init_db
+
 from database.campaign_operations import (
     create_campaign,
     update_campaign,
@@ -22,9 +22,11 @@ from database.character_operations import (
 from models.campaign import Campaign
 from models.character import Character
 from utils.helpers import validate_campaign_data, validate_character_data
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 mcp = FastMCP("D&D Game Master Assistant", dependencies=["pydantic", "sqlite-utils", "rich"])
+db = Database()
+init_db(db)
 
 # Campaign Management Tools
 
@@ -34,7 +36,7 @@ def create_campaign_tool(name: str, description: str) -> Campaign:
     Create a new campaign.
     """
     validate_campaign_data(name, description)
-    return create_campaign(name, description)
+    return create_campaign(db, name, description)
 
 @mcp.tool()
 def update_campaign_tool(campaign_id: int, name: str, description: str) -> Campaign:
@@ -42,54 +44,78 @@ def update_campaign_tool(campaign_id: int, name: str, description: str) -> Campa
     Update an existing campaign.
     """
     validate_campaign_data(name, description)
-    return update_campaign(campaign_id, name, description)
+    return update_campaign(db, campaign_id, name, description)
 
 @mcp.tool()
 def delete_campaign_tool(campaign_id: int) -> bool:
     """
     Delete a campaign.
     """
-    return delete_campaign(campaign_id)
+    return delete_campaign(db, campaign_id)
 
 @mcp.tool()
 def search_campaigns_tool(query: str) -> list[Campaign]:
     """
     Search campaigns by name or description.
     """
-    return search_campaigns(query)
+    return search_campaigns(db, query)
 
 # Character Management Tools
 
 @mcp.tool()
-def create_character_tool(name: str, campaign_id: int, player_name: Optional[str] = None,
+def create_character_tool(name: str, campaign_id: str, player_name: Optional[str] = None,
                          race: Optional[str] = None, character_class: Optional[str] = None,
-                         level: int = 1) -> Character:
+                         level: int = 1, subclass: Optional[str] = None, 
+                         background: Optional[str] = None, backstory: Optional[str] = None,
+                         ability_scores: Optional[Dict] = None, modifiers: Optional[Dict] = None,
+                         proficiencies: Optional[Dict] = None, personality: Optional[Dict] = None,
+                         equipment: Optional[List[str]] = None, spells: Optional[Dict] = None,
+                         familiar: Optional[Dict] = None, motivations: Optional[List[str]] = None,
+                         data: Optional[Dict] = None) -> Character:
     """
-    Create a new character.
+    Create a new character with all available character attributes.
     """
     validate_character_data(name, campaign_id)
-    return create_character(
-        name=name,
+    
+    character = Character(
+        id="temp",  # Will be replaced by the database operation
         campaign_id=campaign_id,
+        name=name,
         player_name=player_name,
         race=race,
         character_class=character_class,
-        level=level
+        level=level,
+        subclass=subclass,
+        background=background,
+        backstory=backstory,
+        ability_scores=ability_scores,
+        modifiers=modifiers,
+        proficiencies=proficiencies,
+        personality=personality,
+        equipment=equipment,
+        spells=spells,
+        familiar=familiar,
+        motivations=motivations,
+        data=data or {},
+        created_at="",  # Will be set by the database operation
+        updated_at=""   # Will be set by the database operation
     )
+    
+    return create_character(db, character)
 
 @mcp.tool()
 def update_character_tool(character_id: int, **kwargs) -> Character:
     """
     Update an existing character.
     """
-    return update_character(character_id, **kwargs)
+    return update_character(db, character_id, **kwargs)
 
 @mcp.tool()
 def delete_character_tool(character_id: int) -> bool:
     """
     Delete a character.
     """
-    return delete_character(character_id)
+    return delete_character(db, character_id)
 
 @mcp.tool()
 def search_characters_tool(query: Optional[str] = None, campaign_id: Optional[int] = None,
@@ -98,6 +124,7 @@ def search_characters_tool(query: Optional[str] = None, campaign_id: Optional[in
     Search characters by name, race, class, etc.
     """
     return search_characters(
+        db,
         query=query,
         campaign_id=campaign_id,
         character_class=character_class,
@@ -109,9 +136,9 @@ def level_up_character_tool(character_id: int) -> Character:
     """
     Level up a character.
     """
-    character = get_character(character_id)
+    character = get_character(db, character_id)
     new_level = character.level + 1
-    return update_character(character_id, level=new_level)
+    return update_character(db, character_id, level=new_level)
 
 @mcp.tool()
 def track_character_progress_tool(character_id: int, current_location: Optional[str] = None,
@@ -120,6 +147,7 @@ def track_character_progress_tool(character_id: int, current_location: Optional[
     Update character campaign progress.
     """
     return update_character_progress(
+        db,
         character_id=character_id,
         current_location=current_location,
         key_discoveries=key_discoveries
@@ -132,14 +160,14 @@ def get_campaign_resource(campaign_id: int) -> Campaign:
     """
     Get campaign details.
     """
-    return get_campaign(campaign_id)
+    return get_campaign(db, campaign_id)
 
 @mcp.resource("campaign://list")
 def list_campaigns_resource() -> list[Campaign]:
     """
     List all campaigns.
     """
-    return list_campaigns()
+    return list_campaigns(db)
 
 # Character Resources
 
@@ -148,21 +176,21 @@ def get_character_resource(character_id: int) -> Character:
     """
     Get character details.
     """
-    return get_character(character_id)
+    return get_character(db, character_id)
 
 @mcp.resource("character://list")
 def list_characters_resource() -> list[Character]:
     """
     List all characters.
     """
-    return list_characters()
+    return list_characters(db)
 
 @mcp.resource("character://campaign/{campaign_id}/list")
 def list_campaign_characters_resource(campaign_id: int) -> list[Character]:
     """
     List all characters in a campaign.
     """
-    return list_campaign_characters(campaign_id)
+    return list_campaign_characters(db, campaign_id)
 
 # Prompts
 

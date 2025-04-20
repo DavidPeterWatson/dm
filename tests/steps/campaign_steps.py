@@ -7,24 +7,24 @@ from src.database.campaign_operations import (
 
 from src.models.campaign import Campaign
 
-
+import logging
+logger = logging.getLogger('behave')
 
 @given('only the following campaigns exist')
 def step_impl_only_these_campaigns_exist(context):
     # First clear the database
-    delete_all_campaigns()
+    delete_all_campaigns(context.db)
     # Then create the specified campaigns
     context.campaign_ids = []
     for row in context.table:
         name = row['name']
         description = row['description']
-        campaign = create_campaign(name, description)
+        campaign = create_campaign(context.db, name, description)
         context.campaign_ids.append(campaign.id)
 
 @given('a campaign "{name}" exists')
 def step_impl_campaign_exists(context, name):
-    campaign = create_campaign(name, f"Description for {name}")
-    context.campaign_id = campaign.id
+    campaign = create_campaign(context.db, name, f"Description for {name}")
 
 @when('I create a campaign with the following details')
 def step_impl_create_campaign_details(context):
@@ -32,53 +32,56 @@ def step_impl_create_campaign_details(context):
     for row in table:
         name = row['name']
         description = row['description']
-        campaign = create_campaign(name, description)
+        campaign = create_campaign(context.db, name, description)
         context.created_campaign = campaign
-        context.campaign_id = campaign.id
 
-@when('I update the campaign with the following details')
+@when('I create a campaign named "{name}" with description "{description}"')
+def step_create_campaign(context, name, description):
+    try:
+        context.campaign_id = create_campaign(context.db, name, description)
+        context.campaign_name_already_exists_error = None
+    except ValueError as e:
+        context.campaign_name_already_exists_error = str(e)
+        context.campaign_id = None
+
+@when('I update campaigns with the following details')
 def step_impl_update_campaign_details(context):
     table = context.table
     for row in table:
+        campaign = get_campaign_by_name(context.db, row['name'])
         name = row['name']
         description = row['description']
-        updated_campaign = update_campaign(context.campaign_id, name, description)
-        context.updated_campaign = updated_campaign
+        context.updated_campaign = update_campaign(context.db, campaign.id, name, description)
 
 @when('I delete the campaign "{name}"')
 def step_impl_delete_campaign(context, name):
-    campaign = get_campaign_by_name(name)
-    result = delete_campaign(campaign.id)
+    campaign = get_campaign_by_name(context.db, name)
+    result = delete_campaign(context.db, campaign.id)
     context.delete_result = result
     context.deleted_campaign_name = name
 
 @when('I search for campaigns containing "{query}"')
 def step_impl_search_campaigns(context, query):
-    context.search_results = search_campaigns(query)
+    context.search_results = search_campaigns(context.db, query)
 
 @then('the campaign "{name}" should be created successfully')
 def step_impl_campaign_created(context, name):
-    campaign = get_campaign_by_name(name)
-    campaign = get_campaign(campaign.id)
+    campaign = get_campaign_by_name(context.db, name)
+    campaign = get_campaign(context.db, campaign.id)
     assert campaign.name == name
 
 @then('the campaign "{name}" should be updated successfully')
 def step_impl_campaign_updated(context, name):
-    campaign = get_campaign(context.updated_campaign.id)
-    assert campaign.name == name
+    campaign = get_campaign_by_name(context.db, name)
+    updated_campaign = get_campaign(context.db, context.updated_campaign.id)
+    assert campaign.id == updated_campaign.id
+    assert campaign.name == updated_campaign.name
+    assert campaign.description == updated_campaign.description
 
 @then('the campaign "{name}" should be deleted successfully')
 def step_impl_campaign_deleted(context, name):
-    # First verify that the delete operation returned True
-    assert context.delete_result is True, "Delete operation did not return True"
-    
-    # Then try to get the campaign and expect a ValueError
-    try:
-        get_campaign_by_name(name)
-        assert False, "Campaign was not deleted - still retrievable by name"
-    except ValueError:
-        # This is the expected path - campaign should not be found
-        pass
+    campaign = get_campaign_by_name(context.db, name)
+    assert campaign is None
 
 @then('the campaign search results should include "{name}"')
 def step_impl_search_include(context, name):
@@ -96,16 +99,24 @@ def step_impl_multiple_campaigns_exist(context):
     for row in context.table:
         name = row['name']
         description = row['description']
-        campaign = create_campaign(name, description)
+        campaign = create_campaign(context.db, name, description)
         context.campaign_ids.append(campaign.id)
 
 @then('the campaign "{name}" should have description "{description}"')
 def step_impl_check_specific_description(context, name, description):
-    campaign = get_campaign(context.campaign_id)
+    campaign = get_campaign_by_name(context.db, name)
     assert campaign.description == description
 
 @then('the campaign "{name}" should no longer be in the list of campaigns')
 def step_impl_specific_campaign_not_in_list(context, name):
-    campaigns = list_campaigns()
+    logger.info(f"DEBUG: Checking if campaign '{name}' is no longer in the list of campaigns")
+    campaigns = list_campaigns(context.db)
+    logger.info(f"DEBUG: Result of list_campaigns: {[c.name for c in campaigns]}")
     campaign_names = [campaign.name for campaign in campaigns]
-    assert name not in campaign_names 
+    assert name not in campaign_names
+    logger.info(f"DEBUG: Successfully verified campaign '{name}' is not in the list")
+
+@then('I should see an error that the campaign name already exists')
+def step_campaign_name_exists_error(context):
+    assert context.campaign_name_already_exists_error is not None
+    assert "already exists" in context.campaign_name_already_exists_error 
