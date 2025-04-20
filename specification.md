@@ -127,7 +127,6 @@ The SQLite database will store campaign information in JSON format with appropri
 
 2. **Character Creation**
    - `create_new_character` - Guide for creating a new character
-   - `update_character_progress` - Guide for updating character progress
 
 
 ## BDD Feature Files

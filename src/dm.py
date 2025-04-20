@@ -16,8 +16,7 @@ from database.character_operations import (
     get_character,
     list_characters,
     list_campaign_characters,
-    search_characters,
-    update_character_progress
+    search_characters
 )
 from models.campaign import Campaign
 from models.character import Character
