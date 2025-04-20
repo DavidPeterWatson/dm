@@ -131,28 +131,6 @@ def search_characters_tool(query: Optional[str] = None, campaign_id: Optional[in
         race=race
     )
 
-@mcp.tool()
-def level_up_character_tool(character_id: int) -> Character:
-    """
-    Level up a character.
-    """
-    character = get_character(db, character_id)
-    new_level = character.level + 1
-    return update_character(db, character_id, level=new_level)
-
-@mcp.tool()
-def track_character_progress_tool(character_id: int, current_location: Optional[str] = None,
-                                 key_discoveries: Optional[List[str]] = None) -> Character:
-    """
-    Update character campaign progress.
-    """
-    return update_character_progress(
-        db,
-        character_id=character_id,
-        current_location=current_location,
-        key_discoveries=key_discoveries
-    )
-
 # Campaign Resources
 
 @mcp.resource("campaign://{campaign_id}")

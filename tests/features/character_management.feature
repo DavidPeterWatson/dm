@@ -48,17 +48,6 @@ Feature: Character Management
     And the character class search results should not include "Bruenor"
     And the character class search results should not include "Drizzt"
 
-  Scenario: Track character campaign progress
-    Given the D&D GM Assistant is running
-    And an empty database
-    And a campaign "Lost Mines" exists
-    And a character "Fizwick" exists for "Lost Mines" campaign
-    When I update the character's campaign progress with:
-      | current_location                                      | key_discoveries                                    |
-      | Entrance to Mythalar's sanctuary in Whispering Ruins  | Inkwhisper is an 'Awakened Conduit'               |
-    Then the character's campaign progress should be updated successfully
-    And the character's current location should be "Entrance to Mythalar's sanctuary in Whispering Ruins"
-
   Scenario: Create a character with all extended fields
     Given the D&D GM Assistant is running
     And an empty database

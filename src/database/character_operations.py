@@ -88,8 +88,7 @@ def update_character(db: Database, character_id: str, **kwargs):
             updated_fields["class"] = value
         elif key == "ability_scores" and isinstance(value, dict):
             # Handle nested updates for ability scores
-            for ability, score in value.items():
-                updated_fields[f"data.ability_scores.{ability}"] = score
+            updated_fields["ability_scores"] = value
         elif key == "campaign_progress" and isinstance(value, dict):
             # Handle nested updates for campaign progress
             for progress_key, progress_value in value.items():
@@ -180,18 +179,3 @@ def search_characters(db: Database, query: str = None, campaign_id: Optional[str
     
     characters = db.characters_collection.find(search_query)
     return [_convert_db_character_to_model(character) for character in characters]
-
-def update_character_progress(db: Database, character_id: str, current_location: Optional[str] = None, 
-                             key_discoveries: Optional[List[str]] = None):
-    # Get the current character
-    character = get_character(db, character_id)
-    
-    # Prepare the campaign progress data
-    campaign_progress = {}
-    if current_location:
-        campaign_progress["current_location"] = current_location
-    if key_discoveries:
-        campaign_progress["key_discoveries"] = key_discoveries
-    
-    # Update the character with the campaign progress
-    return update_character(db, character_id, campaign_progress=campaign_progress) 

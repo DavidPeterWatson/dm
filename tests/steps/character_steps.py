@@ -1,7 +1,7 @@
 from behave import given, when, then
 from src.database.character_operations import (
     create_character, get_character, list_characters,
-    delete_character, update_character, search_characters, update_character_progress, get_character_by_name
+    delete_character, update_character, search_characters, get_character_by_name
 )
 from src.database.campaign_operations import create_campaign, get_campaign_by_name
 from src.models.character import Character, Ability, Proficiencies, Personality, Spells, Familiar
@@ -80,21 +80,6 @@ def step_impl_delete_character(context, name):
 def step_impl_search_characters_by_class(context, character_class):
     context.class_search_results = search_characters(context.db, character_class=character_class)
 
-@when('I update the character\'s campaign progress with')
-def step_impl_update_character_progress(context):
-    table = context.table
-    for row in table:
-        current_location = row['current_location']
-        key_discoveries = [row['key_discoveries']]
-        
-        updated_character = update_character_progress(
-            context.db,
-            context.character_id,
-            current_location=current_location,
-            key_discoveries=key_discoveries
-        )
-        context.updated_character = updated_character
-
 @then('the character "{name}" should be created successfully')
 def step_impl_character_created(context, name):
     character = get_character_by_name(context.db, name)
@@ -116,10 +101,10 @@ def step_impl_character_level(context, level):
     character = get_character(context.db, context.character_id)
     assert character.level == level
 
-@then('the character\'s intelligence score should be {score:d}')
-def step_impl_character_intelligence(context, score):
+@then('the character\'s {ability_score} score should be {score:d}')
+def step_impl_character_ability_score(context, ability_score, score):
     character = get_character(context.db, context.character_id)
-    assert character.data.get('ability_scores', {}).get('intelligence') == score
+    assert getattr(character.ability_scores, ability_score.lower()) == score
 
 @then('the character "{name}" should be deleted successfully')
 def step_impl_character_deleted(context, name):
@@ -187,16 +172,6 @@ def step_impl_multiple_characters_exist(context):
         
         created_character = create_character(context.db, character)
         context.character_ids.append(created_character.id)
-
-@then('the character\'s campaign progress should be updated successfully')
-def step_impl_character_progress_updated(context):
-    character = get_character(context.db, context.character_id)
-    assert 'campaign_progress' in character.data
-
-@then('the character\'s current location should be "{location}"')
-def step_impl_character_location(context, location):
-    character = get_character(context.db, context.character_id)
-    assert character.data.get('campaign_progress', {}).get('current_location') == location
 
 @when('I create a character with the following extended details')
 def step_impl_create_character_extended(context):
