@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 
 def validate_campaign_data(name: str, description: str) -> None:
     """
@@ -22,4 +22,17 @@ def validate_character_data(name: str, campaign_id: int, player_name: Optional[s
     if campaign_id > 100:
         raise ValueError("Invalid campaign ID")
     if player_name and len(player_name) > 100:
-        raise ValueError("Player name is too long (max 100 characters)") 
+        raise ValueError("Player name is too long (max 100 characters)")
+        
+def validate_setting_data(name: str, setting_type: str) -> None:
+    """
+    Validate setting data.
+    """
+    if not name:
+        raise ValueError("Setting name cannot be empty")
+    if len(name) > 100:
+        raise ValueError("Setting name is too long (max 100 characters)")
+    if not setting_type:
+        raise ValueError("Setting type cannot be empty")
+    if len(setting_type) > 50:
+        raise ValueError("Setting type is too long (max 50 characters)") 

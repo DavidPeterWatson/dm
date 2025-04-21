@@ -12,6 +12,7 @@ class Database:
         self.db = None
         self.campaigns_collection = None
         self.characters_collection = None
+        self.settings_collection = None  # Added settings collection
         # Add other collections as needed
         self.initialized = False
     
@@ -39,6 +40,12 @@ def init_db(db: Database, connection_string: Optional[str] = None, db_name: Opti
     db.characters_collection.create_index("class")
     db.characters_collection.create_index("race")
 
+    # Set up settings collection
+    db.settings_collection = db.db.settings
+    db.settings_collection.create_index("name")
+    db.settings_collection.create_index("setting_type")
+    db.settings_collection.create_index("region")
+
     db.initialized = True
 
 def close(db: Database):
@@ -54,6 +61,7 @@ def clear_database(db: Database):
         
     db.campaigns_collection.delete_many({})
     db.characters_collection.delete_many({})
+    db.settings_collection.delete_many({})  # Added settings collection
     return True
 
 # Helper function to convert between MongoDB ObjectId and integer ID

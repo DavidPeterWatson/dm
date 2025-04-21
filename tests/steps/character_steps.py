@@ -1,27 +1,28 @@
 from behave import given, when, then
-from src.database.character_operations import (
-    create_character, get_character, list_characters,
-    delete_character, update_character, search_characters, get_character_by_name
+from src.dm import (
+    create_character_tool,
+    update_character_tool,
+    delete_character_tool,
+    search_characters_tool,
+    get_character_resource,
+    list_characters_resource,
+    create_campaign_tool,
+    search_campaigns_tool
 )
-from src.database.campaign_operations import create_campaign, get_campaign_by_name
 from src.models.character import Character, Ability, Proficiencies, Personality, Spells, Familiar
 import json
 
 @given('a character "{name}" exists for "{campaign_name}" campaign')
 def step_impl_character_exists(context, name, campaign_name):
-    # Create the character
-    campaign = get_campaign_by_name(context.db, campaign_name)
+    # Find campaign by name first
+    campaigns = search_campaigns_tool(query=campaign_name)
+    campaign = next((c for c in campaigns if c.name == campaign_name), None)
     
-    # Create a Character instance
-    character = Character(
-        id="temp",  # Will be replaced by create_character
-        campaign_id=campaign.id,
+    # Create the character using the tool
+    created_character = create_character_tool(
         name=name,
-        created_at="",
-        updated_at=""
+        campaign_id=campaign.id
     )
-    
-    created_character = create_character(context.db, character)
     context.character_id = created_character.id
 
 @when('I create a character with the following details')
@@ -32,21 +33,18 @@ def step_impl_create_character_details(context):
         race = row['race']
         character_class = row['class']
         campaign_name = row['campaign_name']
-        campaign = get_campaign_by_name(context.db, campaign_name)
         
-        # Create a Character instance
-        character = Character(
-            id="temp",  # Will be replaced by create_character
-            campaign_id=campaign.id,
+        # Find campaign by name first
+        campaigns = search_campaigns_tool(query=campaign_name)
+        campaign = next((c for c in campaigns if c.name == campaign_name), None)
+        
+        # Create the character using the tool
+        created_character = create_character_tool(
             name=name,
+            campaign_id=campaign.id,
             race=race,
-            character_class=character_class,
-            created_at="",  # Will be set by create_character
-            updated_at=""   # Will be set by create_character
+            character_class=character_class
         )
-        
-        # Create the character in the database
-        created_character = create_character(context.db, character)
         context.created_character = created_character
         context.character_id = created_character.id
 
@@ -67,43 +65,52 @@ def step_impl_update_character_details(context):
                 # Handle regular fields
                 update_data[column] = int(row[column]) if row[column].isdigit() else row[column]
     
-    updated_character = update_character(context.db, context.character_id, **update_data)
+    updated_character = update_character_tool(character_id=context.character_id, **update_data)
     context.updated_character = updated_character
 
 @when('I delete the character "{name}"')
 def step_impl_delete_character(context, name):
-    result = delete_character(context.db, context.character_id)
+    result = delete_character_tool(character_id=context.character_id)
     context.delete_result = result
     context.deleted_character_name = name
 
 @when('I search for characters with class "{character_class}"')
 def step_impl_search_characters_by_class(context, character_class):
-    context.class_search_results = search_characters(context.db, character_class=character_class)
+    context.class_search_results = search_characters_tool(character_class=character_class)
 
 @then('the character "{name}" should be created successfully')
 def step_impl_character_created(context, name):
-    character = get_character_by_name(context.db, name)
+    # Search for character by name
+    characters = search_characters_tool(query=name)
+    character = next((c for c in characters if c.name == name), None)
+    assert character is not None
     assert character.name == name
 
 @then('{name} should be associated with the "{campaign_name}" campaign')
 def step_impl_character_associated_with_campaign(context, name, campaign_name):
-    campaign = get_campaign_by_name(context.db, campaign_name)
-    character = get_character_by_name(context.db, name)
+    # Find campaign by name first
+    campaigns = search_campaigns_tool(query=campaign_name)
+    campaign = next((c for c in campaigns if c.name == campaign_name), None)
+    
+    # Find character by name
+    characters = search_characters_tool(query=name)
+    character = next((c for c in characters if c.name == name), None)
+    
     assert character.campaign_id == campaign.id
 
 @then('the character "{name}" should be updated successfully')
 def step_impl_character_updated(context, name):
-    character = get_character(context.db, context.character_id)
+    character = get_character_resource(character_id=context.character_id)
     assert character.name == name
 
 @then('the character\'s level should be {level:d}')
 def step_impl_character_level(context, level):
-    character = get_character(context.db, context.character_id)
+    character = get_character_resource(character_id=context.character_id)
     assert character.level == level
 
 @then('the character\'s {ability_score} score should be {score:d}')
 def step_impl_character_ability_score(context, ability_score, score):
-    character = get_character(context.db, context.character_id)
+    character = get_character_resource(character_id=context.character_id)
     assert getattr(character.ability_scores, ability_score.lower()) == score
 
 @then('the character "{name}" should be deleted successfully')
@@ -111,7 +118,7 @@ def step_impl_character_deleted(context, name):
     assert context.delete_result is True
     
     try:
-        get_character(context.db, context.character_id)
+        get_character_resource(character_id=context.character_id)
         assert False, "Character was not deleted - still retrievable by ID"
     except ValueError:
         # This is the expected path - character should not be found
@@ -119,7 +126,7 @@ def step_impl_character_deleted(context, name):
 
 @then('the character should no longer be in the list of characters')
 def step_impl_character_not_in_list(context):
-    characters = list_characters(context.db)
+    characters = list_characters_resource()
     character_names = [character.name for character in characters]
     assert context.deleted_character_name not in character_names
 
@@ -148,8 +155,8 @@ def step_impl_multiple_characters_exist(context):
     # Make sure we have campaigns for these characters
     if not hasattr(context, 'campaign_ids'):
         # Create two campaigns
-        campaign1 = create_campaign(context.db, "Campaign 1", "First test campaign")
-        campaign2 = create_campaign(context.db, "Campaign 2", "Second test campaign")
+        campaign1 = create_campaign_tool(name="Campaign 1", description="First test campaign")
+        campaign2 = create_campaign_tool(name="Campaign 2", description="Second test campaign")
         context.campaign_ids = [campaign1.id, campaign2.id]
     
     context.character_ids = []
@@ -158,19 +165,17 @@ def step_impl_multiple_characters_exist(context):
         race = row['race']
         character_class = row['class']
         campaign_name = row['campaign_name']
-        campaign = get_campaign_by_name(context.db, campaign_name)
         
-        character = Character(
-            id="temp",  # Will be replaced by create_character
-            campaign_id=campaign.id,
+        # Find campaign by name first
+        campaigns = search_campaigns_tool(query=campaign_name)
+        campaign = next((c for c in campaigns if c.name == campaign_name), None)
+        
+        created_character = create_character_tool(
             name=name,
+            campaign_id=campaign.id,
             race=race,
-            character_class=character_class,
-            created_at="",  # Will be set by create_character
-            updated_at=""   # Will be set by create_character
+            character_class=character_class
         )
-        
-        created_character = create_character(context.db, character)
         context.character_ids.append(created_character.id)
 
 @when('I create a character with the following extended details')
@@ -225,33 +230,23 @@ def step_impl_create_character_extended(context):
             personality_data[trait] = value
     
     # Get the campaign
-    campaign = get_campaign_by_name(context.db, "Lost Mines")
-    
-    # Create ability scores, modifiers, and personality if data exists
-    ability_scores = Ability(**ability_scores_data) if ability_scores_data else None
-    modifiers = Ability(**modifiers_data) if modifiers_data else None
-    personality = Personality(**personality_data) if personality_data else None
+    campaigns = search_campaigns_tool(query="Lost Mines")
+    campaign = next((c for c in campaigns if c.name == "Lost Mines"), None)
     
     # Create a Character instance with all the details
-    character = Character(
-        id="temp",  # Will be replaced by create_character
-        campaign_id=campaign.id,
+    created_character = create_character_tool(
         name=name,
+        campaign_id=campaign.id,
         race=race,
         character_class=character_class,
         subclass=subclass,
         background=background,
         level=level,
         backstory=backstory,
-        ability_scores=ability_scores,
-        modifiers=modifiers,
-        personality=personality,
-        created_at="",  # Will be set by create_character
-        updated_at=""   # Will be set by create_character
+        ability_scores=ability_scores_data if ability_scores_data else None,
+        modifiers=modifiers_data if modifiers_data else None,
+        personality=personality_data if personality_data else None
     )
-    
-    # Create the character in the database
-    created_character = create_character(context.db, character)
     
     # Store the character ID for later steps
     context.character_id = created_character.id
@@ -267,9 +262,8 @@ def step_impl_add_proficiencies(context):
         proficiencies[type] = [item.strip() for item in value.split(',')]
     
     # Update the character with proficiencies
-    update_character(
-        context.db, 
-        context.character_id, 
+    update_character_tool(
+        character_id=context.character_id, 
         proficiencies=proficiencies
     )
 
@@ -282,9 +276,8 @@ def step_impl_add_equipment(context):
         equipment.append(row['Description'])
     
     # Update the character with equipment
-    update_character(
-        context.db, 
-        context.character_id, 
+    update_character_tool(
+        character_id=context.character_id, 
         equipment=equipment
     )
 
@@ -298,9 +291,8 @@ def step_impl_add_spells(context):
         spells[type] = [item.strip() for item in type_spells.split(',')]
     
     # Update the character with spells
-    update_character(
-        context.db, 
-        context.character_id, 
+    update_character_tool(
+        character_id=context.character_id, 
         spells=spells
     )
 
@@ -319,9 +311,8 @@ def step_impl_add_familiar(context):
         
     
     # Update the character with familiar
-    update_character(
-        context.db, 
-        context.character_id, 
+    update_character_tool(
+        character_id=context.character_id, 
         familiar=familiar
     )
 
@@ -334,16 +325,15 @@ def step_impl_add_motivations(context):
         motivations.append(row['Description'])
     
     # Update the character with motivations
-    update_character(
-        context.db, 
-        context.character_id, 
+    update_character_tool(
+        character_id=context.character_id, 
         motivations=motivations
     )
 
 @then('the character data should match the following JSON')
 def step_impl_character_data_matches_json(context):
     # Get the character from the database
-    character = get_character(context.db, context.character_id)
+    character = get_character_resource(character_id=context.character_id)
     
     # Parse the expected JSON from the context.text
     expected_data = json.loads(context.text)

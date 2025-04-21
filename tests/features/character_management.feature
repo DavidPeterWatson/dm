@@ -4,18 +4,16 @@ Feature: Character Management
   So that I can track player information and progress
 
   Scenario: Create a new character
-    Given the D&D GM Assistant is running
-    And an empty database
+    Given there are no campaigns
     And a campaign "Lost Mines" exists
     When I create a character with the following details:
       | name           | race          | class   | campaign_name |
-      | Fizwick        | Forest Gnome  | Wizard  | Lost Mines           |
+      | Fizwick        | Forest Gnome  | Wizard  | Lost Mines    |
     Then the character "Fizwick" should be created successfully
     And Fizwick should be associated with the "Lost Mines" campaign
 
   Scenario: Update an existing character
-    Given the D&D GM Assistant is running
-    And an empty database
+    Given there are no campaigns
     And a campaign "Lost Mines" exists
     And a character "Fizwick" exists for "Lost Mines" campaign
     When I update the character with the following details:
@@ -26,8 +24,7 @@ Feature: Character Management
     And the character's intelligence score should be 19
 
   Scenario: Delete a character
-    Given the D&D GM Assistant is running
-    And an empty database
+    Given there are no campaigns
     And a campaign "Lost Mines" exists
     And a character "Fizwick" exists for "Lost Mines" campaign
     When I delete the character "Fizwick"
@@ -35,22 +32,20 @@ Feature: Character Management
     And the character should no longer be in the list of characters
 
   Scenario: Search for characters by class
-    Given the D&D GM Assistant is running
-    And an empty database
+    Given there are no campaigns
     And a campaign "Lost Mines" exists
     And the following characters exist:
       | name           | race          | class     | campaign_name |
-      | Fizwick        | Forest Gnome  | Wizard    | Lost Mines           |
-      | Bruenor        | Dwarf         | Fighter   | Lost Mines           |
-      | Drizzt         | Drow          | Ranger    | Lost Mines           |
+      | Fizwick        | Forest Gnome  | Wizard    | Lost Mines    |
+      | Bruenor        | Dwarf         | Fighter   | Lost Mines    |
+      | Drizzt         | Drow          | Ranger    | Lost Mines    |
     When I search for characters with class "Wizard"
     Then the character class search results should include "Fizwick"
     And the character class search results should not include "Bruenor"
     And the character class search results should not include "Drizzt"
 
   Scenario: Create a character with all extended fields
-    Given the D&D GM Assistant is running
-    And an empty database
+    Given there are no campaigns
     And a campaign "Lost Mines" exists
     When I create a character with the following extended details:
       | Property                          | Value                                |

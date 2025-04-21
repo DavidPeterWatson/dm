@@ -1,30 +1,25 @@
 from behave import given, when, then
-from src.database.campaign_operations import (
-    create_campaign, get_campaign, list_campaigns, 
-    delete_campaign, update_campaign, search_campaigns,
-    delete_all_campaigns, get_campaign_by_name
+from src.dm import (
+    create_campaign_tool,
+    update_campaign_tool,
+    delete_campaign_tool,
+    search_campaigns_tool,
+    get_campaign_resource,
+    list_campaigns_resource,
+    delete_all_campaigns_tool
 )
-
-from src.models.campaign import Campaign
 
 import logging
 logger = logging.getLogger('behave')
 
-@given('only the following campaigns exist')
-def step_impl_only_these_campaigns_exist(context):
-    # First clear the database
-    delete_all_campaigns(context.db)
-    # Then create the specified campaigns
-    context.campaign_ids = []
-    for row in context.table:
-        name = row['name']
-        description = row['description']
-        campaign = create_campaign(context.db, name, description)
-        context.campaign_ids.append(campaign.id)
+@given('there are no campaigns')
+def step_impl_no_campaigns(context):
+    # Clear the database
+    delete_all_campaigns_tool()
 
 @given('a campaign "{name}" exists')
 def step_impl_campaign_exists(context, name):
-    campaign = create_campaign(context.db, name, f"Description for {name}")
+    campaign = create_campaign_tool(name=name, description=f"Description for {name}")
 
 @when('I create a campaign with the following details')
 def step_impl_create_campaign_details(context):
@@ -32,13 +27,14 @@ def step_impl_create_campaign_details(context):
     for row in table:
         name = row['name']
         description = row['description']
-        campaign = create_campaign(context.db, name, description)
+        campaign = create_campaign_tool(name=name, description=description)
         context.created_campaign = campaign
 
 @when('I create a campaign named "{name}" with description "{description}"')
 def step_create_campaign(context, name, description):
     try:
-        context.campaign_id = create_campaign(context.db, name, description)
+        campaign = create_campaign_tool(name=name, description=description)
+        context.campaign_id = campaign.id
         context.campaign_name_already_exists_error = None
     except ValueError as e:
         context.campaign_name_already_exists_error = str(e)
@@ -48,39 +44,50 @@ def step_create_campaign(context, name, description):
 def step_impl_update_campaign_details(context):
     table = context.table
     for row in table:
-        campaign = get_campaign_by_name(context.db, row['name'])
+        # We need to find campaign by name first
+        campaigns = search_campaigns_tool(query=row['name'])
+        campaign = next((c for c in campaigns if c.name == row['name']), None)
         name = row['name']
         description = row['description']
-        context.updated_campaign = update_campaign(context.db, campaign.id, name, description)
+        context.updated_campaign = update_campaign_tool(campaign_id=campaign.id, name=name, description=description)
 
 @when('I delete the campaign "{name}"')
 def step_impl_delete_campaign(context, name):
-    campaign = get_campaign_by_name(context.db, name)
-    result = delete_campaign(context.db, campaign.id)
+    # Find campaign by name first
+    campaigns = search_campaigns_tool(query=name)
+    campaign = next((c for c in campaigns if c.name == name), None)
+    result = delete_campaign_tool(campaign_id=campaign.id)
     context.delete_result = result
     context.deleted_campaign_name = name
 
 @when('I search for campaigns containing "{query}"')
 def step_impl_search_campaigns(context, query):
-    context.search_results = search_campaigns(context.db, query)
+    context.search_results = search_campaigns_tool(query=query)
 
 @then('the campaign "{name}" should be created successfully')
 def step_impl_campaign_created(context, name):
-    campaign = get_campaign_by_name(context.db, name)
-    campaign = get_campaign(context.db, campaign.id)
+    # Search for campaign by name
+    campaigns = search_campaigns_tool(query=name)
+    campaign = next((c for c in campaigns if c.name == name), None)
+    assert campaign is not None
+    campaign = get_campaign_resource(campaign_id=campaign.id)
     assert campaign.name == name
 
 @then('the campaign "{name}" should be updated successfully')
 def step_impl_campaign_updated(context, name):
-    campaign = get_campaign_by_name(context.db, name)
-    updated_campaign = get_campaign(context.db, context.updated_campaign.id)
+    # Search for campaign by name
+    campaigns = search_campaigns_tool(query=name)
+    campaign = next((c for c in campaigns if c.name == name), None)
+    updated_campaign = get_campaign_resource(campaign_id=context.updated_campaign.id)
     assert campaign.id == updated_campaign.id
     assert campaign.name == updated_campaign.name
     assert campaign.description == updated_campaign.description
 
 @then('the campaign "{name}" should be deleted successfully')
 def step_impl_campaign_deleted(context, name):
-    campaign = get_campaign_by_name(context.db, name)
+    # Search for campaign by name
+    campaigns = search_campaigns_tool(query=name)
+    campaign = next((c for c in campaigns if c.name == name), None)
     assert campaign is None
 
 @then('the campaign search results should include "{name}"')
@@ -99,18 +106,20 @@ def step_impl_multiple_campaigns_exist(context):
     for row in context.table:
         name = row['name']
         description = row['description']
-        campaign = create_campaign(context.db, name, description)
+        campaign = create_campaign_tool(name=name, description=description)
         context.campaign_ids.append(campaign.id)
 
 @then('the campaign "{name}" should have description "{description}"')
 def step_impl_check_specific_description(context, name, description):
-    campaign = get_campaign_by_name(context.db, name)
+    # Search for campaign by name
+    campaigns = search_campaigns_tool(query=name)
+    campaign = next((c for c in campaigns if c.name == name), None)
     assert campaign.description == description
 
 @then('the campaign "{name}" should no longer be in the list of campaigns')
 def step_impl_specific_campaign_not_in_list(context, name):
     logger.info(f"DEBUG: Checking if campaign '{name}' is no longer in the list of campaigns")
-    campaigns = list_campaigns(context.db)
+    campaigns = list_campaigns_resource()
     logger.info(f"DEBUG: Result of list_campaigns: {[c.name for c in campaigns]}")
     campaign_names = [campaign.name for campaign in campaigns]
     assert name not in campaign_names
