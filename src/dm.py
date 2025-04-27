@@ -62,44 +62,59 @@ def initialize_db(db_name: str):
 
 @mcp.tool()
 def create_campaign_tool(
-    name: Annotated[str, Field(description="The name of the campaign to create")],
-    description: Annotated[str, Field(description="A detailed description of the campaign setting and storyline")]
+    name: str,
+    description: str
 ) -> Campaign:
     """
     Create a new campaign.
+
+    Args:
+        name: The name of the campaign to create
+        description: A detailed description of the campaign setting and storyline
     """
     validate_campaign_data(name, description)
     return create_campaign(db, name, description)
 
 @mcp.tool()
 def update_campaign_tool(
-    campaign_id: Annotated[int, Field(description="The ID of the campaign to update")],
-    name: Annotated[str, Field(description="The new name for the campaign")],
-    description: Annotated[str, Field(description="The new description for the campaign")]
+    campaign_id: int,
+    name: str,
+    description: str
 ) -> Campaign:
     """
     Update an existing campaign.
+
+    Args:
+        campaign_id: The ID of the campaign to update
+        name: The new name for the campaign
+        description: The new description for the campaign
     """
     validate_campaign_data(name, description)
     return update_campaign(db, campaign_id, name, description)
 
 @mcp.tool()
 def delete_campaign_tool(
-    campaign_id: Annotated[int, Field(description="The ID of the campaign to delete")]
+    campaign_id: int
 ) -> bool:
     """
     Delete a campaign.
-    
+
+    Args:
+        campaign_id: The ID of the campaign to delete
+
     Warning: This will permanently delete the campaign and all associated data.
     """
     return delete_campaign(db, campaign_id)
 
 @mcp.tool()
 def search_campaigns_tool(
-    query: Annotated[str, Field(description="Search term to look for in campaign names and descriptions")]
+    query: str
 ) -> list[Campaign]:
     """
     Search campaigns by name or description.
+
+    Args:
+        query: Search term to look for in campaign names and descriptions
     """
     return search_campaigns(db, query)
 
@@ -107,7 +122,7 @@ def search_campaigns_tool(
 def delete_all_campaigns_tool() -> int:
     """
     Delete all campaigns from the database.
-    
+
     Warning: This will permanently delete ALL campaigns and associated data.
     """
     return delete_all_campaigns(db)
@@ -116,7 +131,7 @@ def delete_all_campaigns_tool() -> int:
 def delete_all_characters_tool() -> int:
     """
     Delete all characters from the database.
-    
+
     Warning: This will permanently delete ALL characters and their data.
     """
     return delete_all_characters(db)
@@ -125,27 +140,47 @@ def delete_all_characters_tool() -> int:
 
 @mcp.tool()
 def create_character_tool(
-    name: Annotated[str, Field(description="The character's name")],
-    campaign_id: Annotated[str, Field(description="The ID of the campaign this character belongs to")],
-    player_name: Annotated[str | None, Field(description="The player's real name")] = None,
-    race: Annotated[str | None, Field(description="The character's race (e.g., Human, Elf, Dwarf)")] = None,
-    character_class: Annotated[str | None, Field(description="The character's class (e.g., Fighter, Wizard, Cleric)")] = None,
-    level: Annotated[int, Field(description="The character's level")] = 1,
-    subclass: Annotated[str | None, Field(description="The character's subclass specialization")] = None,
-    background: Annotated[str | None, Field(description="The character's background (e.g., Noble, Soldier)")] = None,
-    backstory: Annotated[str | None, Field(description="The character's detailed backstory narrative")] = None,
-    ability_scores: Annotated[Dict | None, Field(description="The character's ability scores (STR, DEX, CON, INT, WIS, CHA)")] = None,
-    modifiers: Annotated[Dict | None, Field(description="Various modifiers affecting the character")] = None,
-    proficiencies: Annotated[Dict | None, Field(description="Skills, tools, and other proficiencies")] = None,
-    personality: Annotated[Dict | None, Field(description="Personality traits, ideals, bonds, and flaws")] = None,
-    equipment: Annotated[List[str] | None, Field(description="List of items and equipment carried")] = None,
-    spells: Annotated[Dict | None, Field(description="Spells known and spell slots available")] = None,
-    familiar: Annotated[Dict | None, Field(description="Details about any familiar or companion")] = None,
-    motivations: Annotated[List[str] | None, Field(description="Character's goals and motivations")] = None,
-    data: Annotated[Dict | None, Field(description="Additional custom data for the character")] = None
+    name: str,
+    campaign_id: str,
+    player_name: str | None = None,
+    race: str | None = None,
+    character_class: str | None = None,
+    level: int = 1,
+    subclass: str | None = None,
+    background: str | None = None,
+    backstory: str | None = None,
+    ability_scores: Dict | None = None,
+    modifiers: Dict | None = None,
+    proficiencies: Dict | None = None,
+    personality: Dict | None = None,
+    equipment: List[str] | None = None,
+    spells: Dict | None = None,
+    familiar: Dict | None = None,
+    motivations: List[str] | None = None,
+    data: Dict | None = None
 ) -> Character:
     """
     Create a new character with all available character attributes.
+
+    Args:
+        name: The character's name
+        campaign_id: The ID of the campaign this character belongs to
+        player_name: The player's real name
+        race: The character's race (e.g., Human, Elf, Dwarf)
+        character_class: The character's class (e.g., Fighter, Wizard, Cleric)
+        level: The character's level
+        subclass: The character's subclass specialization
+        background: The character's background (e.g., Noble, Soldier)
+        backstory: The character's detailed backstory narrative
+        ability_scores: The character's ability scores (STR, DEX, CON, INT, WIS, CHA)
+        modifiers: Various modifiers affecting the character
+        proficiencies: Skills, tools, and other proficiencies
+        personality: Personality traits, ideals, bonds, and flaws
+        equipment: List of items and equipment carried
+        spells: Spells known and spell slots available
+        familiar: Details about any familiar or companion
+        motivations: Character's goals and motivations
+        data: Additional custom data for the character
     """
     validate_character_data(name, campaign_id)
     
@@ -177,30 +212,49 @@ def create_character_tool(
 
 @mcp.tool()
 def update_character_tool(
-    character_id: Annotated[int, Field(description="The ID of the character to update")],
-    name: Annotated[str | None, Field(description="The character's new name")] = None,
-    campaign_id: Annotated[str | None, Field(description="The ID of the campaign this character belongs to")] = None,
-    player_name: Annotated[str | None, Field(description="The player's real name")] = None,
-    race: Annotated[str | None, Field(description="The character's race (e.g., Human, Elf, Dwarf)")] = None,
-    character_class: Annotated[str | None, Field(description="The character's class (e.g., Fighter, Wizard, Cleric)")] = None,
-    level: Annotated[int | None, Field(description="The character's level")] = None,
-    subclass: Annotated[str | None, Field(description="The character's subclass specialization")] = None,
-    background: Annotated[str | None, Field(description="The character's background (e.g., Noble, Soldier)")] = None,
-    backstory: Annotated[str | None, Field(description="The character's detailed backstory narrative")] = None,
-    ability_scores: Annotated[Dict | None, Field(description="The character's ability scores (STR, DEX, CON, INT, WIS, CHA)")] = None,
-    modifiers: Annotated[Dict | None, Field(description="Various modifiers affecting the character")] = None,
-    proficiencies: Annotated[Dict | None, Field(description="Skills, tools, and other proficiencies")] = None,
-    personality: Annotated[Dict | None, Field(description="Personality traits, ideals, bonds, and flaws")] = None,
-    equipment: Annotated[List[str] | None, Field(description="List of items and equipment carried")] = None,
-    spells: Annotated[Dict | None, Field(description="Spells known and spell slots available")] = None,
-    familiar: Annotated[Dict | None, Field(description="Details about any familiar or companion")] = None,
-    motivations: Annotated[List[str] | None, Field(description="Character's goals and motivations")] = None,
-    data: Annotated[Dict | None, Field(description="Additional custom data for the character")] = None
+    character_id: int,
+    name: str | None = None,
+    campaign_id: str | None = None,
+    player_name: str | None = None,
+    race: str | None = None,
+    character_class: str | None = None,
+    level: int | None = None,
+    subclass: str | None = None,
+    background: str | None = None,
+    backstory: str | None = None,
+    ability_scores: Dict | None = None,
+    modifiers: Dict | None = None,
+    proficiencies: Dict | None = None,
+    personality: Dict | None = None,
+    equipment: List[str] | None = None,
+    spells: Dict | None = None,
+    familiar: Dict | None = None,
+    motivations: List[str] | None = None,
+    data: Dict | None = None
 ) -> Character:
     """
     Update an existing character.
-    
-    All parameters except character_id are optional. Only the provided parameters will be updated.
+
+    Args:
+        character_id: The ID of the character to update
+        name: The character's new name
+        campaign_id: The ID of the campaign this character belongs to
+        player_name: The player's real name
+        race: The character's race (e.g., Human, Elf, Dwarf)
+        character_class: The character's class (e.g., Fighter, Wizard, Cleric)
+        level: The character's level
+        subclass: The character's subclass specialization
+        background: The character's background (e.g., Noble, Soldier)
+        backstory: The character's detailed backstory narrative
+        ability_scores: The character's ability scores (STR, DEX, CON, INT, WIS, CHA)
+        modifiers: Various modifiers affecting the character
+        proficiencies: Skills, tools, and other proficiencies
+        personality: Personality traits, ideals, bonds, and flaws
+        equipment: List of items and equipment carried
+        spells: Spells known and spell slots available
+        familiar: Details about any familiar or companion
+        motivations: Character's goals and motivations
+        data: Additional custom data for the character
     """
     update_data = {k: v for k, v in locals().items() 
                   if k not in ['character_id', 'db'] and v is not None}
@@ -210,20 +264,27 @@ def update_character_tool(
 def delete_character_tool(character_id: int) -> bool:
     """
     Delete a character.
+
+    Args:
+        character_id: The ID of the character to delete
     """
     return delete_character(db, character_id)
 
 @mcp.tool()
 def search_characters_tool(
-    query: Annotated[str | None, Field(description="Search term to look for in character names and details")] = None,
-    campaign_id: Annotated[int | None, Field(description="Filter characters by campaign ID")] = None,
-    character_class: Annotated[str | None, Field(description="Filter characters by character class")] = None,
-    race: Annotated[str | None, Field(description="Filter characters by race")] = None
+    query: str | None = None,
+    campaign_id: int | None = None,
+    character_class: str | None = None,
+    race: str | None = None
 ) -> list[Character]:
     """
     Search characters by name, race, class, etc.
-    
-    All search parameters are optional. If multiple parameters are provided, they are combined (AND logic).
+
+    Args:
+        query: Search term to look for in character names and details
+        campaign_id: Filter characters by campaign ID
+        character_class: Filter characters by character class
+        race: Filter characters by race
     """
     return search_characters(
         db,
@@ -324,35 +385,61 @@ def create_setting_tool(
 
 @mcp.tool()
 def update_setting_tool(
-    setting_id: Annotated[str, Field(description="The ID of the setting to update")],
-    setting_type: Annotated[str | None, Field(description="The type of setting (e.g., City, Town, Dungeon, Forest)")] = None,
-    name: Annotated[str | None, Field(description="The name of the setting")] = None,
-    region: Annotated[str | None, Field(description="The region where this setting is located")] = None,
-    scale: Annotated[str | None, Field(description="The scale of the setting (e.g., Small, Medium, Large)")] = None,
-    population: Annotated[str | None, Field(description="The population size of the setting")] = None,
-    first_impression: Annotated[str | None, Field(description="The first impression visitors get of this setting")] = None,
-    distinctive_features: Annotated[List[str] | None, Field(description="List of distinctive features of this setting")] = None,
-    atmosphere: Annotated[str | None, Field(description="The general atmosphere or mood of the setting")] = None,
-    key_locations: Annotated[List[str] | None, Field(description="List of key locations within this setting")] = None,
-    points_of_interest: Annotated[List[str] | None, Field(description="List of interesting points or landmarks")] = None,
-    travel_routes: Annotated[List[str] | None, Field(description="Major travel routes to and from this setting")] = None,
-    factions: Annotated[List[str] | None, Field(description="Major factions or groups present in this setting")] = None,
-    power_structure: Annotated[str | None, Field(description="The power structure and leadership of this setting")] = None,
-    local_customs: Annotated[str | None, Field(description="Local customs, traditions, and cultural notes")] = None,
-    economic_basis: Annotated[str | None, Field(description="The economic foundation of this setting")] = None,
-    origin: Annotated[str | None, Field(description="The origin story or founding of this setting")] = None,
-    recent_history: Annotated[str | None, Field(description="Recent historical events affecting this setting")] = None,
-    hidden_past: Annotated[str | None, Field(description="Secret or hidden history of this setting")] = None,
-    integration_notes: Annotated[str | None, Field(description="Notes on how to integrate this setting into a campaign")] = None,
-    encounter_recommendations: Annotated[List[str] | None, Field(description="Recommended encounters for this setting")] = None,
-    dramatic_element_opportunities: Annotated[List[str] | None, Field(description="Potential dramatic scenarios for this setting")] = None,
-    parent_id: Annotated[str | None, Field(description="ID of the parent setting if this is a sub-location")] = None,
-    notes: Annotated[str | None, Field(description="Additional notes about the setting")] = None
+    setting_id: str,
+    setting_type: str | None = None,
+    name: str | None = None,
+    region: str | None = None,
+    scale: str | None = None,
+    population: str | None = None,
+    first_impression: str | None = None,
+    distinctive_features: List[str] | None = None,
+    atmosphere: str | None = None,
+    key_locations: List[str] | None = None,
+    points_of_interest: List[str] | None = None,
+    travel_routes: List[str] | None = None,
+    factions: List[str] | None = None,
+    power_structure: str | None = None,
+    local_customs: str | None = None,
+    economic_basis: str | None = None,
+    origin: str | None = None,
+    recent_history: str | None = None,
+    hidden_past: str | None = None,
+    integration_notes: str | None = None,
+    encounter_recommendations: List[str] | None = None,
+    dramatic_element_opportunities: List[str] | None = None,
+    parent_id: str | None = None,
+    notes: str | None = None
 ) -> dict:
     """
     Update an existing setting.
-    Only the setting_id is required. Only the provided parameters will be updated.
-    Returns a dict with the updated Setting and a warning message if unknown fields were provided.
+
+    Args:
+        setting_id: The ID of the setting to update
+        setting_type: The type of setting (e.g., City, Town, Dungeon, Forest)
+        name: The name of the setting
+        region: The region where this setting is located
+        scale: The scale of the setting (e.g., Small, Medium, Large)
+        population: The population size of the setting
+        first_impression: The first impression visitors get of this setting
+        distinctive_features: List of distinctive features of this setting
+        atmosphere: The general atmosphere or mood of the setting
+        key_locations: List of key locations within this setting
+        points_of_interest: List of interesting points or landmarks
+        travel_routes: Major travel routes to and from this setting
+        factions: Major factions or groups present in this setting
+        power_structure: The power structure and leadership of this setting
+        local_customs: Local customs, traditions, and cultural notes
+        economic_basis: The economic foundation of this setting
+        origin: The origin story or founding of this setting
+        recent_history: Recent historical events affecting this setting
+        hidden_past: Secret or hidden history of this setting
+        integration_notes: Notes on how to integrate this setting into a campaign
+        encounter_recommendations: Recommended encounters for this setting
+        dramatic_element_opportunities: Potential dramatic scenarios for this setting
+        parent_id: ID of the parent setting if this is a sub-location
+        notes: Additional notes about the setting
+    Returns:
+        dict: The updated Setting and a warning message if unknown fields were provided.
     """
     from models.setting import Setting
     # Collect all update data from locals except setting_id and db, and only include non-None values
@@ -370,23 +457,30 @@ def update_setting_tool(
 
 @mcp.tool()
 def delete_setting_tool(
-    setting_id: Annotated[str, Field(description="The ID of the setting to delete")]
+    setting_id: str
 ) -> bool:
     """
     Delete a setting.
-    
+
+    Args:
+        setting_id: The ID of the setting to delete
+
     Warning: This will permanently delete the setting and all its data.
     """
     return delete_setting(db, setting_id)
 
 @mcp.tool()
 def search_settings_tool(
-    query: Annotated[str, Field(description="Search term to look for in setting names, regions, or descriptions")]
+    query: str
 ) -> Dict:
     """
     Search settings by name, region, or description.
-    
-    Returns a dictionary containing the matching settings, a message, and a count.
+
+    Args:
+        query: Search term to look for in setting names, regions, or descriptions
+
+    Returns:
+        dict: The matching settings, a message, and a count.
     """
     settings = search_settings(db, query)
     result = {
@@ -398,12 +492,16 @@ def search_settings_tool(
 
 @mcp.tool()
 def filter_settings_by_type_tool(
-    setting_type: Annotated[str, Field(description="The type of setting to filter by (e.g., City, Town, Forest)")]
+    setting_type: str
 ) -> Dict:
     """
     Filter settings by their type (e.g., City, Town, Forest).
-    
-    Returns a dictionary containing the matching settings, a message, and a count.
+
+    Args:
+        setting_type: The type of setting to filter by (e.g., City, Town, Forest)
+
+    Returns:
+        dict: The matching settings, a message, and a count.
     """
     settings = filter_settings_by_type(db, setting_type)
     result = {
@@ -415,12 +513,16 @@ def filter_settings_by_type_tool(
 
 @mcp.tool()
 def filter_settings_by_parent_tool(
-    parent_id: Annotated[str, Field(description="The ID of the parent setting to filter by")]
+    parent_id: str
 ) -> Dict:
     """
     Filter settings by their parent setting ID.
-    
-    Returns a dictionary containing child settings of the specified parent, a message, and a count.
+
+    Args:
+        parent_id: The ID of the parent setting to filter by
+
+    Returns:
+        dict: Child settings of the specified parent, a message, and a count.
     """
     # Get all settings and filter by parent_id
     all_settings = list_settings(db)
@@ -435,12 +537,16 @@ def filter_settings_by_parent_tool(
 
 @mcp.tool()
 def get_setting_by_name_tool(
-    name: Annotated[str, Field(description="The name of the setting to retrieve")]
+    name: str
 ) -> Setting:
     """
     Get a setting by its name.
-    
-    The name must match exactly (case-sensitive).
+
+    Args:
+        name: The name of the setting to retrieve
+
+    Raises:
+        ValueError: If the setting is not found
     """
     setting = get_setting_by_name(db, name)
     if not setting:
@@ -451,7 +557,7 @@ def get_setting_by_name_tool(
 def delete_all_settings_tool() -> bool:
     """
     Delete all settings from the database.
-    
+
     Warning: This will permanently delete ALL settings and their data.
     """
     return delete_all_settings(db)
