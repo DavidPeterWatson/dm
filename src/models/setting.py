@@ -25,5 +25,6 @@ class Setting(BaseModel):
     encounter_recommendations: Optional[List[str]] = None  # Suitable encounter types
     dramatic_element_opportunities: Optional[List[str]] = None  # Enhanced dramatic elements
     parent_id: Optional[str] = None  # ID of the parent setting (for hierarchical relationships)
+    notes: Optional[str] = None  # Additional notes about the setting
     created_at: str
     updated_at: str 

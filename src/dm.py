@@ -237,34 +237,57 @@ def search_characters_tool(
 
 @mcp.tool()
 def create_setting_tool(
-    setting_type: Annotated[str, Field(description="The type of setting (e.g., City, Town, Dungeon, Forest)")],
-    name: Annotated[str, Field(description="The name of the setting")],
-    region: Annotated[str, Field(description="The region where this setting is located")],
-    scale: Annotated[str, Field(description="The scale of the setting (e.g., Small, Medium, Large)")],
-    population: Annotated[str, Field(description="The population size of the setting")],
-    first_impression: Annotated[str | None, Field(description="The first impression visitors get of this setting")] = None,
-    distinctive_features: Annotated[List[str] | None, Field(description="List of distinctive features of this setting")] = None,
-    atmosphere: Annotated[str | None, Field(description="The general atmosphere or mood of the setting")] = None,
-    key_locations: Annotated[List[str] | None, Field(description="List of key locations within this setting")] = None,
-    points_of_interest: Annotated[List[str] | None, Field(description="List of interesting points or landmarks")] = None,
-    travel_routes: Annotated[List[str] | None, Field(description="Major travel routes to and from this setting")] = None,
-    factions: Annotated[List[str] | None, Field(description="Major factions or groups present in this setting")] = None,
-    power_structure: Annotated[str | None, Field(description="The power structure and leadership of this setting")] = None,
-    local_customs: Annotated[str | None, Field(description="Local customs, traditions, and cultural notes")] = None,
-    economic_basis: Annotated[str | None, Field(description="The economic foundation of this setting")] = None,
-    origin: Annotated[str | None, Field(description="The origin story or founding of this setting")] = None,
-    recent_history: Annotated[str | None, Field(description="Recent historical events affecting this setting")] = None,
-    hidden_past: Annotated[str | None, Field(description="Secret or hidden history of this setting")] = None,
-    integration_notes: Annotated[str | None, Field(description="Notes on how to integrate this setting into a campaign")] = None,
-    encounter_recommendations: Annotated[List[str] | None, Field(description="Recommended encounters for this setting")] = None,
-    dramatic_element_opportunities: Annotated[List[str] | None, Field(description="Potential dramatic scenarios for this setting")] = None,
-    parent_id: Annotated[str | None, Field(description="ID of the parent setting if this is a sub-location")] = None
+    setting_type: str,
+    name: str,
+    region: str,
+    scale: str,
+    population: str,
+    first_impression: str = None,
+    distinctive_features: list[str] = None,
+    atmosphere: str = None,
+    key_locations: list[str] = None,
+    points_of_interest: list[str] = None,
+    travel_routes: list[str] = None,
+    factions: list[str] = None,
+    power_structure: str = None,
+    local_customs: str = None,
+    economic_basis: str = None,
+    origin: str = None,
+    recent_history: str = None,
+    hidden_past: str = None,
+    integration_notes: str = None,
+    encounter_recommendations: list[str] = None,
+    dramatic_element_opportunities: list[str] = None,
+    parent_id: str = None,
+    notes: str = None
 ) -> Setting:
     """
     Create a new setting with detailed information.
-    
-    Required fields are setting_type, name, region, scale, and population.
-    All other fields are optional and provide additional detail to the setting.
+
+    Args:
+        setting_type: The type of setting (e.g., City, Town, Dungeon, Forest)
+        name: The name of the setting
+        region: The region where this setting is located
+        scale: The scale of the setting (e.g., Small, Medium, Large)
+        population: The population size of the setting
+        first_impression: The first impression visitors get of this setting
+        distinctive_features: List of distinctive features of this setting
+        atmosphere: The general atmosphere or mood of the setting
+        key_locations: List of key locations within this setting
+        points_of_interest: List of interesting points or landmarks
+        travel_routes: Major travel routes to and from this setting
+        factions: Major factions or groups present in this setting
+        power_structure: The power structure and leadership of this setting
+        local_customs: Local customs, traditions, and cultural notes
+        economic_basis: The economic foundation of this setting
+        origin: The origin story or founding of this setting
+        recent_history: Recent historical events affecting this setting
+        hidden_past: Secret or hidden history of this setting
+        integration_notes: Notes on how to integrate this setting into a campaign
+        encounter_recommendations: Recommended encounters for this setting
+        dramatic_element_opportunities: Potential dramatic scenarios for this setting
+        parent_id: ID of the parent setting if this is a sub-location
+        notes: Additional notes about the setting
     """
     validate_setting_data(name, setting_type)
     
@@ -290,7 +313,8 @@ def create_setting_tool(
         "integration_notes": integration_notes,
         "encounter_recommendations": encounter_recommendations,
         "dramatic_element_opportunities": dramatic_element_opportunities,
-        "parent_id": parent_id
+        "parent_id": parent_id,
+        "notes": notes
     }
     
     # Remove None values
@@ -323,7 +347,7 @@ def update_setting_tool(
     encounter_recommendations: Annotated[List[str] | None, Field(description="Recommended encounters for this setting")] = None,
     dramatic_element_opportunities: Annotated[List[str] | None, Field(description="Potential dramatic scenarios for this setting")] = None,
     parent_id: Annotated[str | None, Field(description="ID of the parent setting if this is a sub-location")] = None,
-    **kwargs
+    notes: Annotated[str | None, Field(description="Additional notes about the setting")] = None
 ) -> dict:
     """
     Update an existing setting.
@@ -331,9 +355,8 @@ def update_setting_tool(
     Returns a dict with the updated Setting and a warning message if unknown fields were provided.
     """
     from models.setting import Setting
-    # Collect all update data, including any extra fields from kwargs (for JSON updates)
-    update_data = {k: v for k, v in locals().items() if k not in ['setting_id', 'db', 'kwargs'] and v is not None}
-    update_data.update(kwargs)
+    # Collect all update data from locals except setting_id and db, and only include non-None values
+    update_data = {k: v for k, v in locals().items() if k not in ['setting_id', 'db'] and v is not None}
     valid_fields = set(Setting.__fields__.keys()) - {'id', 'created_at', 'updated_at'}
     # Remove non-user-supplied keys from unknown_fields
     non_user_keys = {'Setting'}
@@ -432,6 +455,13 @@ def delete_all_settings_tool() -> bool:
     Warning: This will permanently delete ALL settings and their data.
     """
     return delete_all_settings(db)
+
+@mcp.tool()
+def get_database_info_tool() -> dict:
+    """
+    Get database information including name and counts for campaigns, characters, and settings.
+    """
+    return db.get_info()
 
 # Campaign Resources
 

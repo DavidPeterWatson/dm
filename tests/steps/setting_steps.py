@@ -226,16 +226,11 @@ def step_impl_check_setting_details(context):
     for row in context.table:
         field = row['field']
         expected_value = row['value']
-        actual_value = getattr(setting, field)
-        
-        # For list fields, convert the expected value to a list for comparison
-        if field in ['distinctive_features', 'key_locations', 'points_of_interest', 
-                    'travel_routes', 'factions', 'encounter_recommendations', 
-                    'dramatic_element_opportunities']:
-            expected_list = [item.strip() for item in expected_value.split(',')]
-            assert actual_value == expected_list, f"Field {field} mismatch: expected {expected_list}, got {actual_value}"
-        else:
-            assert str(actual_value) == expected_value, f"Field {field} mismatch: expected {expected_value}, got {actual_value}"
+        actual_value = getattr(setting, field, None)
+        # Convert lists to comma-separated strings for comparison
+        if isinstance(actual_value, list):
+            actual_value = ', '.join(actual_value)
+        assert str(actual_value) == expected_value, f"Field '{field}' expected '{expected_value}', got '{actual_value}'"
 
 @then('the setting "{name}" should be updated successfully')
 def step_impl_setting_updated(context, name):
@@ -250,21 +245,14 @@ def step_impl_setting_updated(context, name):
 @then('the setting should have the updated fields')
 def step_impl_check_updated_setting_details(context):
     setting = context.updated_setting
-    
-    # Check updated fields
     for row in context.table:
         field = row['field']
         expected_value = row['value']
-        actual_value = getattr(setting, field)
-        
-        # For list fields, convert the expected value to a list for comparison
-        if field in ['distinctive_features', 'key_locations', 'points_of_interest', 
-                    'travel_routes', 'factions', 'encounter_recommendations', 
-                    'dramatic_element_opportunities']:
-            expected_list = [item.strip() for item in expected_value.split(',')]
-            assert actual_value == expected_list, f"Updated field {field} mismatch: expected {expected_list}, got {actual_value}"
-        else:
-            assert str(actual_value) == expected_value, f"Updated field {field} mismatch: expected {expected_value}, got {actual_value}"
+        actual_value = getattr(setting, field, None)
+        # Convert lists to comma-separated strings for comparison
+        if isinstance(actual_value, list):
+            actual_value = ', '.join(actual_value)
+        assert str(actual_value) == expected_value, f"Field '{field}' expected '{expected_value}', got '{actual_value}'"
 
 @then('the setting "{name}" should be deleted successfully')
 def step_impl_setting_deleted(context, name):

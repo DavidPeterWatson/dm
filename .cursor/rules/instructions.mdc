@@ -9,4 +9,5 @@ alwaysApply: true
 - Wait for user confirmation before proceeding to next steps
 - Ask for more detail when insuffcient details are provided
 - Only do what is asked
-
+- use 'make test' to run tests
+- 

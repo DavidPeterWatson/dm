@@ -16,6 +16,14 @@ class Database:
         # Add other collections as needed
         self.initialized = False
     
+    def get_info(self):
+        return {
+            'name': self.db.name if self.db is not None else None,
+            'campaign_count': self.campaigns_collection.count_documents({}) if self.campaigns_collection is not None else 0,
+            'character_count': self.characters_collection.count_documents({}) if self.characters_collection is not None else 0,
+            'setting_count': self.settings_collection.count_documents({}) if self.settings_collection is not None else 0,
+        }
+
 def init_db(db: Database, connection_string: Optional[str] = None, db_name: Optional[str] = None):
     """Initialize the database connection and collections"""
     if db.initialized:

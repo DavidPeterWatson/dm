@@ -43,6 +43,7 @@ Feature: Setting Management
             | origin               | Founded by Aghairon                      |
             | recent_history       | Dragon attack, Guild conflicts           |
             | hidden_past          | Ancient dungeons beneath                 |
+            | notes                | City is known for its magical wards      |
         Then the setting "Waterdeep" should be created successfully
         And the setting should have the following details:
             | field                | value                                    |
@@ -64,23 +65,30 @@ Feature: Setting Management
             | origin               | Founded by Aghairon                      |
             | recent_history       | Dragon attack, Guild conflicts           |
             | hidden_past          | Ancient dungeons beneath                 |
+            | notes                | City is known for its magical wards      |
 
     Scenario: Update multiple setting properties at once
         Given there are no settings
         And a setting "Waterdeep" exists
         When I update the setting with the following details:
             | field           | value                                            |
+            | setting_type    | City                                             |
+            | name            | Waterdeep                                        |
             | population      | ~130,000 diverse inhabitants                     |
             | power_structure | Masked Lords, Open Lord, and Guild Councils      |
             | factions        | Lords Alliance, Harpers, Zhentarim, Force Grey   |
             | hidden_past     | Ancient dungeons and forgotten catacombs beneath |
+            | notes           | Now includes a new magical university            |
         Then the setting "Waterdeep" should be updated successfully
         And the setting should have the updated fields:
             | field           | value                                            |
+            | setting_type    | City                                             |
+            | name            | Waterdeep                                        |
             | population      | ~130,000 diverse inhabitants                     |
             | power_structure | Masked Lords, Open Lord, and Guild Councils      |
             | factions        | Lords Alliance, Harpers, Zhentarim, Force Grey   |
             | hidden_past     | Ancient dungeons and forgotten catacombs beneath |
+            | notes           | Now includes a new magical university            |
 
     Scenario: Delete a setting
         Given there are no settings
@@ -222,16 +230,3 @@ Feature: Setting Management
             }
             """
         Then I should see an error about invalid field types
-
-    Scenario: Error handling when updating settings (unknown fields)
-        Given there are no settings
-        And a setting "Waterdeep" exists
-        When I update the setting with the following JSON
-            """
-            {
-                "population": "~100,000 inhabitants",
-                "nonexistent_field": "Some value"
-            }
-            """
-        Then I should see a warning: "Warning: Unknown fields ignored: nonexistent_field"
-        And the setting should be updated with valid fields only
