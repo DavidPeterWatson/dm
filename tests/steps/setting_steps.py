@@ -117,11 +117,52 @@ def step_impl_update_setting_details(context):
     update_data = {'setting_id': setting.id}
     for row in context.table:
         update_data[row['field']] = row['value']
-    
     # Process list fields
     update_data = process_setting_fields(update_data)
-    
-    context.updated_setting = update_setting_tool(**update_data)
+    result = update_setting_tool(**update_data)
+    if isinstance(result, dict) and 'setting' in result:
+        context.updated_setting = result['setting']
+        context.warning_message = result.get('warning')
+    else:
+        context.updated_setting = result
+
+@when('I update the setting with the following JSON')
+def step_impl_update_setting_with_json(context):
+    setting = getattr(context, 'created_setting', None)
+    if not setting:
+        # If not present, create a default setting for error scenarios
+        setting_data = {
+            'setting_type': 'City',
+            'name': 'TestCity',
+            'region': 'Test Region',
+            'scale': 'Medium',
+            'population': 'Test population',
+            'distinctive_features': ['Feature 1', 'Feature 2']
+        }
+        setting = create_setting_tool(**setting_data)
+        context.created_setting = setting
+    try:
+        import json
+        update_data = json.loads(context.text)
+        context.original_update_data = update_data.copy()
+        update_data['setting_id'] = setting.id
+        result = update_setting_tool(**update_data)
+        if isinstance(result, dict) and 'setting' in result:
+            context.updated_setting = result['setting']
+            context.warning_message = result.get('warning')
+            context.error_message = None
+        else:
+            context.updated_setting = result
+            context.warning_message = None
+            context.error_message = None
+    except json.JSONDecodeError as e:
+        context.error_message = str(e)
+        context.updated_setting = None
+        context.warning_message = None
+    except (TypeError, ValueError) as e:
+        context.error_message = str(e)
+        context.updated_setting = None
+        context.warning_message = None
 
 @when('I delete the setting "{name}"')
 def step_impl_delete_setting(context, name):
@@ -140,7 +181,7 @@ def step_impl_search_settings(context, query):
     search_results = search_settings_tool(query=query)
     context.search_results = search_results["settings"]
 
-@when('I filter settings by type "{setting_type}"')
+@when('I search for settings of type "{setting_type}"')
 def step_impl_filter_settings_by_type(context, setting_type):
     filtered_results = filter_settings_by_type_tool(setting_type=setting_type)
     context.search_results = filtered_results["settings"]
@@ -302,92 +343,6 @@ def step_impl_filter_settings_by_parent(context, parent_name):
     else:
         context.search_results = []
 
-@when('I update the setting with invalid JSON')
-def step_impl_update_setting_invalid_json(context):
-    setting = context.created_setting
-    try:
-        # The invalid JSON is in context.text
-        invalid_json = context.text
-        # This would normally fail at the JSON parsing level
-        import json
-        update_data = json.loads(invalid_json)  # This should raise an exception
-        update_data['setting_id'] = setting.id
-        update_setting_tool(**update_data)
-        context.error_message = None
-    except json.JSONDecodeError as e:
-        context.error_message = str(e)
-    except Exception as e:
-        # Ensure we catch and record any error for assertion
-        context.error_message = f"JSON error: {str(e)}"
-
-@when('I update the setting with invalid field type')
-def step_impl_update_setting_invalid_field_type(context):
-    setting = context.created_setting
-    try:
-        # Parse the JSON but it contains invalid field types
-        import json
-        update_data = json.loads(context.text)
-        update_data['setting_id'] = setting.id
-        update_setting_tool(**update_data)
-        context.error_message = None
-    except (TypeError, ValueError) as e:
-        context.error_message = str(e)
-
-@when('I update the setting with nonexistent fields')
-def step_impl_update_setting_nonexistent_fields(context):
-    # Create a fresh setting for testing
-    setting_data = {
-        'setting_type': 'City',
-        'name': 'TestCity',
-        'region': 'Test Region',
-        'scale': 'Medium',
-        'population': 'Test population',
-        'distinctive_features': ['Feature 1', 'Feature 2']
-    }
-    # Make sure we start clean
-    context.warning_message = None
-    context.error_message = None
-    
-    # Create a fresh test setting to avoid issues from previous tests
-    test_setting = create_setting_tool(**setting_data)
-    
-    try:
-        import json
-        update_data = json.loads(context.text)
-        # Store the original data for comparison
-        context.original_update_data = update_data.copy()
-        
-        # Add the setting_id to the update data
-        update_data['setting_id'] = test_setting.id
-        
-        # Update with all fields and let the tool handle invalid fields
-        context.updated_setting = update_setting_tool(**update_data)
-        
-        # Determine which fields were actually used
-        valid_fields = []
-        invalid_fields = []
-        
-        for field in context.original_update_data:
-            if hasattr(context.updated_setting, field):
-                valid_fields.append(field)
-            else:
-                invalid_fields.append(field)
-        
-        # Set a warning message manually since the tool doesn't generate one
-        if invalid_fields:
-            context.warning_message = f"Unknown fields detected: {', '.join(invalid_fields)}"
-    except Exception as e:
-        # If we get an error, still keep the test setting so the test can continue
-        context.updated_setting = test_setting
-        context.error_message = str(e)
-        
-    # Make sure we have at least a warning or an error message
-    if not context.warning_message and not context.error_message:
-        # Check if any fields were ignored
-        if any(field for field in context.original_update_data if not hasattr(context.updated_setting, field)):
-            invalid_fields = [field for field in context.original_update_data if not hasattr(context.updated_setting, field)]
-            context.warning_message = f"Unknown fields detected: {', '.join(invalid_fields)}"
-
 @then('I should see an error about invalid JSON format')
 def step_impl_check_invalid_json_error(context):
     assert context.error_message is not None, "Expected an error message but none was set"
@@ -400,12 +355,6 @@ def step_impl_check_invalid_json_error(context):
 def step_impl_check_invalid_field_type_error(context):
     assert context.error_message is not None
     assert "type" in context.error_message.lower()
-
-@then('I should see a warning about unknown fields')
-def step_impl_check_unknown_fields_warning(context):
-    assert hasattr(context, 'warning_message'), "Context should have a warning_message attribute"
-    assert context.warning_message is not None, f"Warning message should not be None"
-    assert "Unknown fields" in context.warning_message, f"Expected warning about unknown fields but got: {context.warning_message}"
 
 @then('the setting should be updated with valid fields only')
 def step_impl_check_valid_fields_updated(context):
@@ -443,4 +392,10 @@ def step_impl_check_setting_child(context, parent_name, child_name):
         # Check if the child has the parent's ID as parent_id
         assert child_setting.parent_id == parent_setting.id, f"Setting {child_name} does not have {parent_name} as parent"
     except ValueError as e:
-        assert False, str(e) 
+        assert False, str(e)
+
+@then('I should see a warning: "{warning_text}"')
+def step_impl_check_explicit_warning_text(context, warning_text):
+    assert hasattr(context, 'warning_message'), "Context should have a warning_message attribute"
+    assert context.warning_message is not None, "Warning message should not be None"
+    assert context.warning_message == warning_text, f"Expected warning '{warning_text}' but got: '{context.warning_message}'" 

@@ -1,0 +1,12 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## Instructions
+- Only implement what is explicitly requested
+- Do not make changes beyond what is asked for. If you intend to something that is not asked for then check with the user first.
+- Wait for user confirmation before proceeding to next steps
+- Ask for more detail when insuffcient details are provided
+- Only do what is asked
+

@@ -18,12 +18,19 @@ def step_impl_character_exists(context, name, campaign_name):
     campaigns = search_campaigns_tool(query=campaign_name)
     campaign = next((c for c in campaigns if c.name == campaign_name), None)
     
-    # Create the character using the tool
-    created_character = create_character_tool(
-        name=name,
-        campaign_id=campaign.id
-    )
-    context.character_id = created_character.id
+    # Check if character already exists for this campaign
+    characters = search_characters_tool(query=name, campaign_id=campaign.id)
+    print(f"DEBUG: Characters found for name '{name}' and campaign_id '{campaign.id}': {[{'name': c.name, 'campaign_id': c.campaign_id} for c in characters]}")
+    character = next((c for c in characters if c.name == name and c.campaign_id == campaign.id), None)
+    if character is None:
+        # Create the character using the tool
+        created_character = create_character_tool(
+            name=name,
+            campaign_id=campaign.id
+        )
+        context.character_id = created_character.id
+    else:
+        context.character_id = character.id
 
 @when('I create a character with the following details')
 def step_impl_create_character_details(context):
@@ -38,15 +45,23 @@ def step_impl_create_character_details(context):
         campaigns = search_campaigns_tool(query=campaign_name)
         campaign = next((c for c in campaigns if c.name == campaign_name), None)
         
-        # Create the character using the tool
-        created_character = create_character_tool(
-            name=name,
-            campaign_id=campaign.id,
-            race=race,
-            character_class=character_class
-        )
-        context.created_character = created_character
-        context.character_id = created_character.id
+        # Check if character already exists for this campaign
+        characters = search_characters_tool(query=name, campaign_id=campaign.id)
+        print(f"DEBUG: Characters found for name '{name}' and campaign_id '{campaign.id}': {[{'name': c.name, 'campaign_id': c.campaign_id} for c in characters]}")
+        character = next((c for c in characters if c.name == name and c.campaign_id == campaign.id), None)
+        if character is None:
+            # Create the character using the tool
+            created_character = create_character_tool(
+                name=name,
+                campaign_id=campaign.id,
+                race=race,
+                character_class=character_class
+            )
+            context.created_character = created_character
+            context.character_id = created_character.id
+        else:
+            context.created_character = character
+            context.character_id = character.id
 
 @when('I update the character with the following details')
 def step_impl_update_character_details(context):
@@ -170,13 +185,19 @@ def step_impl_multiple_characters_exist(context):
         campaigns = search_campaigns_tool(query=campaign_name)
         campaign = next((c for c in campaigns if c.name == campaign_name), None)
         
-        created_character = create_character_tool(
-            name=name,
-            campaign_id=campaign.id,
-            race=race,
-            character_class=character_class
-        )
-        context.character_ids.append(created_character.id)
+        # Check if character already exists for this campaign
+        characters = search_characters_tool(query=name, campaign_id=campaign.id)
+        character = next((c for c in characters if c.name == name and c.campaign_id == campaign.id), None)
+        if character is None:
+            created_character = create_character_tool(
+                name=name,
+                campaign_id=campaign.id,
+                race=race,
+                character_class=character_class
+            )
+            context.character_ids.append(created_character.id)
+        else:
+            context.character_ids.append(character.id)
 
 @when('I create a character with the following extended details')
 def step_impl_create_character_extended(context):
@@ -233,24 +254,30 @@ def step_impl_create_character_extended(context):
     campaigns = search_campaigns_tool(query="Lost Mines")
     campaign = next((c for c in campaigns if c.name == "Lost Mines"), None)
     
-    # Create a Character instance with all the details
-    created_character = create_character_tool(
-        name=name,
-        campaign_id=campaign.id,
-        race=race,
-        character_class=character_class,
-        subclass=subclass,
-        background=background,
-        level=level,
-        backstory=backstory,
-        ability_scores=ability_scores_data if ability_scores_data else None,
-        modifiers=modifiers_data if modifiers_data else None,
-        personality=personality_data if personality_data else None
-    )
-    
-    # Store the character ID for later steps
-    context.character_id = created_character.id
-    context.created_character = created_character
+    # Check if character already exists for this campaign
+    characters = search_characters_tool(query=name, campaign_id=campaign.id)
+    character = next((c for c in characters if c.name == name and c.campaign_id == campaign.id), None)
+    if character is None:
+        # Create a Character instance with all the details
+        created_character = create_character_tool(
+            name=name,
+            campaign_id=campaign.id,
+            race=race,
+            character_class=character_class,
+            subclass=subclass,
+            background=background,
+            level=level,
+            backstory=backstory,
+            ability_scores=ability_scores_data if ability_scores_data else None,
+            modifiers=modifiers_data if modifiers_data else None,
+            personality=personality_data if personality_data else None
+        )
+        # Store the character ID for later steps
+        context.character_id = created_character.id
+        context.created_character = created_character
+    else:
+        context.character_id = character.id
+        context.created_character = character
 
 @when('I add the following proficiencies')
 def step_impl_add_proficiencies(context):

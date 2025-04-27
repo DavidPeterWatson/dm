@@ -1,0 +1,34 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Code Standards
+
+## Clean Code Principles
+- Follow Robert C. Martin's Clean Code principles throughout
+- Write short functions (3-5 lines long)
+- Create descriptive function names that clearly express intent
+- Avoid comments in code - code should be self-documenting
+- Follow single responsibility principle
+
+## Programming Approach
+- Use functional programming approaches where possible
+- Maintain appropriate levels of abstraction within functions/classes
+- Apply Test-Driven Development (TDD) and Behavior-Driven Development (BDD)
+- TDD means write a one test at a time, run the tests to ensure they fail and then wrote the code to pass.
+
+## Technology Stack
+- Place all terminal commands in a makefile
+- Run terminal commands yourself
+- Application must be written in Python
+- Follow Python's PEP 8 style guide
+- Use Python standard libraries where applicable before introducing dependencies
+
+## Error Handling
+- Implement proper error handling for all API calls
+- Ensure failures are gracefully managed, especially for Jira integration
+
+## Documentation
+- Documentation should be clear, concise, and accurate
+- Focus documentation on how to use features, not implementation details

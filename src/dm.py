@@ -19,7 +19,8 @@ from database.character_operations import (
     get_character,
     list_characters,
     list_campaign_characters,
-    search_characters
+    search_characters,
+    delete_all_characters
 )
 from database.setting_operations import (
     create_setting,
@@ -110,6 +111,15 @@ def delete_all_campaigns_tool() -> int:
     Warning: This will permanently delete ALL campaigns and associated data.
     """
     return delete_all_campaigns(db)
+
+@mcp.tool()
+def delete_all_characters_tool() -> int:
+    """
+    Delete all characters from the database.
+    
+    Warning: This will permanently delete ALL characters and their data.
+    """
+    return delete_all_characters(db)
 
 # Character Management Tools
 
@@ -312,16 +322,28 @@ def update_setting_tool(
     integration_notes: Annotated[str | None, Field(description="Notes on how to integrate this setting into a campaign")] = None,
     encounter_recommendations: Annotated[List[str] | None, Field(description="Recommended encounters for this setting")] = None,
     dramatic_element_opportunities: Annotated[List[str] | None, Field(description="Potential dramatic scenarios for this setting")] = None,
-    parent_id: Annotated[str | None, Field(description="ID of the parent setting if this is a sub-location")] = None
-) -> Setting:
+    parent_id: Annotated[str | None, Field(description="ID of the parent setting if this is a sub-location")] = None,
+    **kwargs
+) -> dict:
     """
     Update an existing setting.
-    
     Only the setting_id is required. Only the provided parameters will be updated.
+    Returns a dict with the updated Setting and a warning message if unknown fields were provided.
     """
-    update_data = {k: v for k, v in locals().items() 
-                  if k not in ['setting_id', 'db'] and v is not None}
-    return update_setting(db, setting_id, **update_data)
+    from models.setting import Setting
+    # Collect all update data, including any extra fields from kwargs (for JSON updates)
+    update_data = {k: v for k, v in locals().items() if k not in ['setting_id', 'db', 'kwargs'] and v is not None}
+    update_data.update(kwargs)
+    valid_fields = set(Setting.__fields__.keys()) - {'id', 'created_at', 'updated_at'}
+    # Remove non-user-supplied keys from unknown_fields
+    non_user_keys = {'Setting'}
+    unknown_fields = [k for k in update_data if k not in valid_fields and k not in non_user_keys]
+    filtered_update_data = {k: v for k, v in update_data.items() if k in valid_fields}
+    warning = None
+    if unknown_fields:
+        warning = f"Warning: Unknown fields ignored: {', '.join(unknown_fields)}"
+    updated_setting = update_setting(db, setting_id, **filtered_update_data)
+    return {"setting": updated_setting, "warning": warning}
 
 @mcp.tool()
 def delete_setting_tool(

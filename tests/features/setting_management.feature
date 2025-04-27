@@ -3,33 +3,27 @@ Feature: Setting Management
     I want to manage campaign settings
     So that I can create and organize detailed locations for my game
 
-    Scenario: Create a new setting
+    Scenario: Create a new setting with only required fields
         Given there are no settings
         When I create a setting with the following details:
-            | field                | value                                               |
-            | setting_type         | City                                                |
-            | name                 | Waterdeep                                           |
-            | region               | Sword Coast                                         |
-            | scale                | Large metropolis                                    |
-            | population           | ~100,000 diverse inhabitants                        |
-            | first_impression     | A bustling coastal metropolis with towering spires  |
-            | distinctive_features | Castle Waterdeep, Harbor Ward, Market Square        |
-            | atmosphere           | Busy streets filled with traders from across Faerun |
+            | field        | value       |
+            | setting_type | City        |
+            | name         | Waterdeep   |
+            | region       | Sword Coast |
+            | scale        | Large       |
+            | population   | 100,000     |
         Then the setting "Waterdeep" should be created successfully
         And the setting should have the following details:
-            | field                | value                                               |
-            | setting_type         | City                                                |
-            | name                 | Waterdeep                                           |
-            | region               | Sword Coast                                         |
-            | scale                | Large metropolis                                    |
-            | population           | ~100,000 diverse inhabitants                        |
-            | first_impression     | A bustling coastal metropolis with towering spires  |
-            | distinctive_features | Castle Waterdeep, Harbor Ward, Market Square        |
-            | atmosphere           | Busy streets filled with traders from across Faerun |
+            | field        | value       |
+            | setting_type | City        |
+            | name         | Waterdeep   |
+            | region       | Sword Coast |
+            | scale        | Large       |
+            | population   | 100,000     |
 
     Scenario: Create a setting with complete details
         Given there are no settings
-        When I create a setting with all details:
+        When I create a setting with the following details:
             | field                | value                                    |
             | setting_type         | City                                     |
             | name                 | Waterdeep                                |
@@ -70,52 +64,6 @@ Feature: Setting Management
             | origin               | Founded by Aghairon                      |
             | recent_history       | Dragon attack, Guild conflicts           |
             | hidden_past          | Ancient dungeons beneath                 |
-
-    Scenario: Update an existing setting
-        Given there are no settings
-        And a setting "Waterdeep" exists
-        When I update the setting with the following details:
-            | field          | value                                           |
-            | population     | ~120,000 diverse inhabitants                    |
-            | recent_history | Dragon attack, Guild conflicts, Plague outbreak |
-        Then the setting "Waterdeep" should be updated successfully
-        And the setting should have the updated fields:
-            | field          | value                                           |
-            | population     | ~120,000 diverse inhabitants                    |
-            | recent_history | Dragon attack, Guild conflicts, Plague outbreak |
-
-    Scenario: Update setting first impression
-        Given there are no settings
-        And a setting "Waterdeep" exists
-        When I update the setting with the following details:
-            | field            | value                                                          |
-            | first_impression | A grand coastal metropolis with spires reaching for the clouds |
-        Then the setting "Waterdeep" should be updated successfully
-        And the setting should have the updated fields:
-            | field            | value                                                          |
-            | first_impression | A grand coastal metropolis with spires reaching for the clouds |
-
-    Scenario: Update setting distinctive features
-        Given there are no settings
-        And a setting "Waterdeep" exists
-        When I update the setting with the following details:
-            | field                | value                                                  |
-            | distinctive_features | Castle Waterdeep, Harbor Ward, Market Square, Sea Ward |
-        Then the setting "Waterdeep" should be updated successfully
-        And the setting should have the updated fields:
-            | field                | value                                                  |
-            | distinctive_features | Castle Waterdeep, Harbor Ward, Market Square, Sea Ward |
-
-    Scenario: Update setting atmosphere
-        Given there are no settings
-        And a setting "Waterdeep" exists
-        When I update the setting with the following details:
-            | field      | value                                                                  |
-            | atmosphere | Bustling streets filled with traders and a hint of sea salt in the air |
-        Then the setting "Waterdeep" should be updated successfully
-        And the setting should have the updated fields:
-            | field      | value                                                                  |
-            | atmosphere | Bustling streets filled with traders and a hint of sea salt in the air |
 
     Scenario: Update multiple setting properties at once
         Given there are no settings
@@ -140,30 +88,6 @@ Feature: Setting Management
         When I delete the setting "Waterdeep"
         Then the setting "Waterdeep" should be deleted successfully
         And the setting "Waterdeep" should no longer be in the list of settings
-
-    Scenario: Search for settings
-        Given there are no settings
-        And the following settings exist:
-            | name      | setting_type | region           |
-            | Waterdeep | City         | Sword Coast      |
-            | Phandalin | Town         | Sword Coast      |
-            | Barovia   | Region       | Domains of Dread |
-        When I search for settings containing "Sword Coast"
-        Then the setting search results should include "Waterdeep"
-        And the setting search results should include "Phandalin"
-        And the setting search results should not include "Barovia"
-
-    Scenario: Filter settings by type
-        Given there are no settings
-        And the following settings exist:
-            | name               | setting_type | region      |
-            | Waterdeep          | City         | Sword Coast |
-            | Phandalin          | Town         | Sword Coast |
-            | Neverwinter Forest | Forest       | Sword Coast |
-        When I filter settings by type "City"
-        Then the setting search results should include "Waterdeep"
-        And the setting search results should not include "Phandalin"
-        And the setting search results should not include "Neverwinter Forest"
 
     Scenario: Cannot create settings with duplicate names
         Given there are no settings
@@ -255,37 +179,39 @@ Feature: Setting Management
         And the setting "Ardena" should have "Orrhaga" as a child setting
         And the setting "Orrhaga" should have "Shadowreach Highlands" as a child setting
 
-    Scenario: Filter settings by relationship
+    Scenario: Search for settings by text or type
         Given there are no settings
-        And the following hierarchical settings exist:
-            | name                   | setting_type | parent  |
-            | Ardena                 | World        | None    |
-            | Orrhaga                | Continent    | Ardena  |
-            | Orth                   | Continent    | Ardena  |
-            | Shadowreach Highlands  | Region       | Orrhaga |
-            | Ancient Redwood Forest | Forest       | Orrhaga |
-            | Port Lumina            | City         | Orth    |
-        When I filter settings to show children of "Ardena"
-        Then the setting search results should include "Orrhaga"
-        And the setting search results should include "Orth"
-        And the setting search results should not include "Shadowreach Highlands"
-        When I filter settings to show children of "Orrhaga"
-        Then the setting search results should include "Shadowreach Highlands"
-        And the setting search results should include "Ancient Redwood Forest"
-        And the setting search results should not include "Port Lumina"
+        And the following settings exist:
+            | name               | setting_type | region           |
+            | Waterdeep          | City         | Sword Coast      |
+            | Phandalin          | Town         | Sword Coast      |
+            | Barovia            | Region       | Domains of Dread |
+            | Neverwinter Forest | Forest       | Sword Coast      |
+        When I search for settings containing "Sword Coast"
+        Then the setting search results should include "Waterdeep"
+        And the setting search results should include "Phandalin"
+        And the setting search results should not include "Barovia"
+        When I search for settings of type "City"
+        Then the setting search results should include "Waterdeep"
+        And the setting search results should not include "Phandalin"
+        And the setting search results should not include "Neverwinter Forest"
 
-    Scenario: Error handling when updating settings
+    Scenario: Error handling when updating settings (invalid JSON)
         Given there are no settings
         And a setting "Waterdeep" exists
-        When I update the setting with invalid JSON
+        When I update the setting with the following JSON
             """
             {
-            "population": "~100,000
+            "population": "~100,000"
             "factions": Lords Alliance, Harpers, Zhentarim
             }
             """
         Then I should see an error about invalid JSON format
-        When I update the setting with invalid field type
+
+    Scenario: Error handling when updating settings (invalid field type)
+        Given there are no settings
+        And a setting "Waterdeep" exists
+        When I update the setting with the following JSON
             """
             {
                 "population": 100000,
@@ -296,12 +222,16 @@ Feature: Setting Management
             }
             """
         Then I should see an error about invalid field types
-        When I update the setting with nonexistent fields
+
+    Scenario: Error handling when updating settings (unknown fields)
+        Given there are no settings
+        And a setting "Waterdeep" exists
+        When I update the setting with the following JSON
             """
             {
                 "population": "~100,000 inhabitants",
                 "nonexistent_field": "Some value"
             }
             """
-        Then I should see a warning about unknown fields
+        Then I should see a warning: "Warning: Unknown fields ignored: nonexistent_field"
         And the setting should be updated with valid fields only

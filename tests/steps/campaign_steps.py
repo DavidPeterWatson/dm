@@ -6,7 +6,8 @@ from src.dm import (
     search_campaigns_tool,
     get_campaign_resource,
     list_campaigns_resource,
-    delete_all_campaigns_tool
+    delete_all_campaigns_tool,
+    delete_all_characters_tool
 )
 
 import logging
@@ -16,6 +17,7 @@ logger = logging.getLogger('behave')
 def step_impl_no_campaigns(context):
     # Clear the database
     delete_all_campaigns_tool()
+    delete_all_characters_tool()
 
 @given('a campaign "{name}" exists')
 def step_impl_campaign_exists(context, name):

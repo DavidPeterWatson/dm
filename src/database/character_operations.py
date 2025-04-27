@@ -179,3 +179,7 @@ def search_characters(db: Database, query: str = None, campaign_id: Optional[str
     
     characters = db.characters_collection.find(search_query)
     return [_convert_db_character_to_model(character) for character in characters]
+
+def delete_all_characters(db: Database) -> int:
+    result = db.characters_collection.delete_many({})
+    return result.deleted_count
